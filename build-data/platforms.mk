@@ -91,6 +91,6 @@ install-deb: $(patsubst %,%-find-source,$(ROOT_PACKAGES))
 	: Go fabricate the actual Debian packages ;			\
 	(								\
 	cd deb &&							\
-	dpkg-buildpackage -us -uc -b					\
+	dpkg-buildpackage -us -uc -b -aarm64				\
 	)
 

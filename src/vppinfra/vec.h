@@ -558,7 +558,7 @@ do {										\
     @return V and P (value-result macro parameters)
 */
 
-#define vec_add2(V,P,N)           vec_add2_ha(V,P,N,0,0)
+#define vec_add2(V,P,N)           vec_add2_ha(V,P,N,0,64)
 
 /** \brief Add N elements to end of vector V,
     return pointer to new elements in P. (no header, alignment specified)

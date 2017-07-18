@@ -81,7 +81,7 @@ bin_vpp_LDADD = \
   libsvm.la \
   libsvmdb.la \
   libvppinfra.la \
-  -lrt -lm -lpthread -ldl
+  -lrt -lm -lpthread -ldl -lcrypto
 
 bin_vpp_LDFLAGS = -Wl,--export-dynamic
 
