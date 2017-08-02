@@ -344,6 +344,8 @@ dpdk_ipsec_process (vlib_main_t * vm, vlib_node_runtime_t * rt,
 	  vec_elt (dcm->cop_pools, dev_conf.socket_id) = rmp;
 	}
 
+      rte_cryptodev_start(dev_id);
+
       fprintf (stdout, "%u\t%u\t%u\t%u\n", dev_id, dev_conf.nb_queue_pairs,
 	       DPDK_CRYPTO_NB_SESS_OBJS, DPDK_CRYPTO_CACHE_SIZE);
     }
