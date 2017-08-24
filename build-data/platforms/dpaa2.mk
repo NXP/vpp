@@ -35,7 +35,7 @@ dpaa2_uses_dpdk = yes
 dpaa2_uses_external_dpdk = yes
 dpaa2_dpdk_inc_dir = $(DPDK_PATH)/include/dpdk
 dpaa2_dpdk_lib_dir = $(DPDK_PATH)/lib
-dpaa2_dpdk_shared_lib = yes
+dpaa2_dpdk_shared_lib = no
 else
 # compile using internal DPDK + NXP DPAA2 Driver patch
 dpaa2_dpdk_arch = "armv8a"
@@ -57,4 +57,4 @@ dpaa2_debug_TAG_LDFLAGS = -g -O2 -DCLIB_DEBUG -fstack-protector-all \
 dpaa2_TAG_CFLAGS = -g -O2 -fPIC -march=$(MARCH) -mcpu=$(dpaa2_mtune) \
 		-mtune=$(dpaa2_mtune) -funroll-all-loops -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6 -I$(OPENSSL_PATH)/include
 dpaa2_TAG_LDFLAGS = -g -O2 -fPIC -march=$(MARCH) -mcpu=$(dpaa2_mtune) \
-		-mtune=$(dpaa2_mtune) -funroll-all-loops -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6 -L$(OPENSSL_PATH)/lib -Wl,--no-as-needed -ldpdk
+		-mtune=$(dpaa2_mtune) -funroll-all-loops -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6 -L$(OPENSSL_PATH)/lib
