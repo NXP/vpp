@@ -29,7 +29,7 @@ if WITH_IBVERBS_LIB
 dpdk_plugin_la_LDFLAGS += -Wl,-libverbs
 endif
 dpdk_plugin_la_CFLAGS = $(AM_CFLAGS)
-dpdk_plugin_la_LDFLAGS += -Wl,-lnuma
+#dpdk_plugin_la_LDFLAGS += -Wl,-lnuma
 
 dpdk_plugin_la_LDFLAGS += -Wl,-lm,-ldl
 dpdk_plugin_la_LIBADD =

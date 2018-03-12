@@ -15,14 +15,16 @@
 dpaa2_arch = aarch64
 dpaa2_os = linux-gnu
 dpaa2_target = aarch64-linux-gnu
-dpaa2_mtune = cortex-A57
-dpaa2_march = "armv8-a+fp+simd+crc+crypto"
+dpaa2_mtune = cortex-A72
+dpaa2_march = "armv8-a+crc"
 dpaa2_cross_ldflags = \
 	-Wl,--dynamic-linker=/lib/ld-linux-aarch64.so.1 \
-	-Wl,-rpath=/usr/lib64
+	-Wl,-rpath=/usr/lib64 \
+	-Wl,-rpath=./.libs \
+	-Wl,-rpath=$(OPENSSL_PATH)/lib
 
 dpaa2_native_tools = vppapigen
-dpaa2_root_packages = vpp vlib vlib-api vnet svm vpp-api-test
+dpaa2_root_packages = vpp 
 
 # DPDK configuration parameters
 dpaa2_uses_dpdk = yes
@@ -30,6 +32,7 @@ dpaa2_uses_dpdk = yes
 # installed DPDK libraries and headers.
 ifeq ($(PLATFORM),dpaa2)
 ifneq ($(DPDK_PATH),)
+#dpaa2_dpdk_shared_lib = yes
 dpaa2_uses_dpdk = yes
 dpaa2_uses_external_dpdk = yes
 dpaa2_dpdk_inc_dir = $(DPDK_PATH)/include/dpdk
@@ -37,18 +40,19 @@ dpaa2_dpdk_lib_dir = $(DPDK_PATH)/lib
 else
 # compile using internal DPDK + NXP DPAA2 Driver patch
 dpaa2_dpdk_arch = "armv8a"
-dpaa2_dpdk_target = "arm64-dpaa2-linuxapp-gcc"
-dpaa2_dpdk_make_extra_args = "CROSS=$(dpaa2_target)- DPDK_PKTMBUF_HEADROOM=256"
+dpaa2_dpdk_target = "arm64-dpaa-linuxapp-gcc"
+dpaa2_dpdk_make_extra_args = "CONFIG_RTE_KNI_KMOD=n"
 endif
 endif
 
-vpp_configure_args_dpaa2 = --with-dpdk --without-libssl \
-	--with-sysroot=$(SYSROOT)
-vnet_configure_args_dpaa2 = --with-dpdk --without-libssl \
-	--with-sysroot=$(SYSROOT)
+vpp_configure_args_dpaa2 = --without-ipv6sr --with-pre-data=128\
+	--disable-flowprobe-plugin --disable-ixge-plugin \
+	--disable-memif-plugin --disable-sixrd-plugin --disable-gtpu-plugin \
+	--disable-ioam-plugin --disable-lb-plugin --disable-ila-plugin \
+	--disable-nat-plugin --disable-l2e-plugin --disable-stn-plugin \
+	--disable-pppoe-plugin --disable-kubeproxy-plugin \
+	--disable-vom
 
-# Set these parameters carefully. The vlib_buffer_t is 256 bytes, i.e.
-vlib_configure_args_dpaa2 = --with-pre-data=256
 
 
 dpaa2_debug_TAG_CFLAGS = -g -O2 -DCLIB_DEBUG -fPIC -fstack-protector-all \
@@ -58,9 +62,8 @@ dpaa2_debug_TAG_LDFLAGS = -g -O2 -DCLIB_DEBUG -fstack-protector-all \
 
 # Use -rdynamic is for stack tracing, O0 for debugging....default is O2
 # Use -DCLIB_LOG2_CACHE_LINE_BYTES to change cache line size
-dpaa2_TAG_CFLAGS = -g -O2 -fPIC -march=$(MARCH) -mcpu=$(dpaa2_mtune) \
-		-mtune=$(dpaa2_mtune) -funroll-all-loops -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6
-dpaa2_TAG_LDFLAGS = -g -O2 -fPIC -march=$(MARCH) -mcpu=$(dpaa2_mtune) \
-		-mtune=$(dpaa2_mtune) -funroll-all-loops -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6
-
+dpaa2_TAG_CFLAGS = -g -O0 -fPIC -march=$(MARCH) -mcpu=$(dpaa2_mtune) \
+		-mtune=$(dpaa2_mtune) -funroll-all-loops -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6 -I$(OPENSSL_PATH)/include
+dpaa2_TAG_LDFLAGS = -g -O0 -fPIC -march=$(MARCH) -mcpu=$(dpaa2_mtune) \
+		-mtune=$(dpaa2_mtune) -funroll-all-loops -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6 -L$(OPENSSL_PATH)/lib
 

@@ -906,7 +906,7 @@ dpdk_config (vlib_main_t * vm, unformat_input_t * input)
     format (0, "%s/hugepages%c", vlib_unix_get_runtime_dir (), 0);
 
   conf->device_config_index_by_pci_addr = hash_create (0, sizeof (uword));
-  log_level = RTE_LOG_NOTICE;
+  log_level = RTE_LOG_DEBUG;
 
   while (unformat_check_input (input) != UNFORMAT_END_OF_INPUT)
     {
@@ -1590,7 +1590,8 @@ dpdk_init (vlib_main_t * vm)
   dm->vnet_main = vnet_get_main ();
   dm->conf = &dpdk_config_main;
 
-  dm->conf->nchannels = 4;
+  /* SACHIN TODO */
+  dm->conf->nchannels = 1;
   dm->conf->num_mbufs = dm->conf->num_mbufs ? dm->conf->num_mbufs : NB_MBUF;
   vec_add1 (dm->conf->eal_init_args, (u8 *) "vnet");
 
