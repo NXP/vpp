@@ -14,7 +14,8 @@
 # Configuration for NXP DPAA2 ARM64 based platform
 dpaa2_arch = aarch64
 dpaa2_os = linux-gnu
-dpaa2_target = aarch64-linux-gnu
+dpaa2_target = aarch64-fsl-linux
+#dpaa2_target = aarch64-linux-gnu
 dpaa2_mtune = cortex-A72
 dpaa2_march = "armv8-a+crc"
 dpaa2_cross_ldflags = \
@@ -62,8 +63,8 @@ dpaa2_debug_TAG_LDFLAGS = -g -O2 -DCLIB_DEBUG -fstack-protector-all \
 
 # Use -rdynamic is for stack tracing, O0 for debugging....default is O2
 # Use -DCLIB_LOG2_CACHE_LINE_BYTES to change cache line size
-dpaa2_TAG_CFLAGS = -g -O0 -fPIC -march=$(MARCH) -mcpu=$(dpaa2_mtune) \
+dpaa2_TAG_CFLAGS = -g -O3 -fPIC -march=$(MARCH) -mcpu=$(dpaa2_mtune) \
 		-mtune=$(dpaa2_mtune) -funroll-all-loops -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6 -I$(OPENSSL_PATH)/include
-dpaa2_TAG_LDFLAGS = -g -O0 -fPIC -march=$(MARCH) -mcpu=$(dpaa2_mtune) \
+dpaa2_TAG_LDFLAGS = -g -O3 -fPIC -march=$(MARCH) -mcpu=$(dpaa2_mtune) \
 		-mtune=$(dpaa2_mtune) -funroll-all-loops -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6 -L$(OPENSSL_PATH)/lib
 
