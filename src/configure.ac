@@ -264,6 +264,8 @@ AM_CONDITIONAL(WITH_AESNI_MB_LIB, test "$with_aesni_mb_lib" = "yes")
 m4_append([list_of_with], [isa_l_crypto_lib], [, ])
 AM_CONDITIONAL(WITH_ISA_L_CRYPTO_LIB, test "$with_isa_l_crypto_lib" = "yes")
 
+m4_append([list_of_with], [armv8_crypto_lib], [, ])
+AM_CONDITIONAL(WITH_ARMV8_CRYPTO_LIB, test "$with_armv8_crypto_lib" = "yes")
 
 with_ibverbs_lib=no
 DPDK_IS_PMD_ENABLED(LIBRTE_MLX4_PMD, dpdk_mlx4_pmd)

@@ -46,6 +46,10 @@ dpaa2_dpdk_make_extra_args = "CONFIG_RTE_KNI_KMOD=n"
 endif
 endif
 
+ifneq ($(ARMV8_CRYPTO_LIB_PATH),)
+dpaa2_uses_armv8_crypto_lib = yes
+endif
+
 vpp_configure_args_dpaa2 = --without-ipv6sr --with-pre-data=128\
 	--disable-flowprobe-plugin --disable-ixge-plugin \
 	--disable-memif-plugin --disable-sixrd-plugin --disable-gtpu-plugin \
