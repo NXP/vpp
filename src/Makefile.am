@@ -40,6 +40,16 @@ install-data-local:
 	echo "Command list built, Time taken: $$GREP_TIME"
 
 ###############################################################################
+# DPDK
+###############################################################################
+
+if ENABLE_DPDK_SHARED
+DPDK_LD_FLAGS = -Wl,--whole-archive,-ldpdk,--no-whole-archive
+else
+DPDK_LD_FLAGS = -Wl,--whole-archive,-l:libdpdk.a,--no-whole-archive,-lm,-ldl
+endif
+
+###############################################################################
 # Components
 ###############################################################################
 
