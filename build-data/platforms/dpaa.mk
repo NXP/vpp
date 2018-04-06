@@ -12,63 +12,80 @@
 # limitations under the License.
 
 # Configuration for NXP DPAA2 ARM64 based platform
-dpaa2_arch = aarch64
-dpaa2_os = linux-gnu
-dpaa2_target = aarch64-fsl-linux
-#dpaa2_target = aarch64-linux-gnu
-dpaa2_mtune = cortex-A72
-dpaa2_march = "armv8-a+crc"
-dpaa2_cross_ldflags = \
+MACHINE=$(shell uname -m)
+
+dpaa_mtune = cortex-A72
+dpaa_march = "armv8-a+crc"
+
+ifeq ($(MACHINE),aarch64)
+dpaa_arch = native
+else
+dpaa_arch = aarch64
+dpaa_os = linux-gnu
+dpaa_target = aarch64-fsl-linux
+dpaa_cross_ldflags = \
 	-Wl,--dynamic-linker=/lib/ld-linux-aarch64.so.1 \
 	-Wl,-rpath=/usr/lib64 \
 	-Wl,-rpath=./.libs \
 	-Wl,-rpath=$(OPENSSL_PATH)/lib
+endif
 
-dpaa2_native_tools = vppapigen
-dpaa2_root_packages = vpp 
+# Re-write Default configuration, if requied
+ifneq ($(CROSS_PREFIX),)
+# like: aarch64-linux-gnu
+dpaa_target = $(CROSS_PREFIX)
+endif
+
+ifneq ($(CPU_MTUNE),)
+# like: cortex-A53
+dpaa_mtune = $(CPU_MTUNE)
+endif
+
+dpaa_native_tools = vppapigen
+dpaa_root_packages = vpp
 
 # DPDK configuration parameters
-dpaa2_uses_dpdk = yes
+dpaa_uses_dpdk = yes
+
 # Compile with external DPDK only if "DPDK_PATH" variable is defined where we have
 # installed DPDK libraries and headers.
-ifeq ($(PLATFORM),dpaa2)
+ifeq ($(PLATFORM),dpaa)
 ifneq ($(DPDK_PATH),)
-#dpaa2_dpdk_shared_lib = yes
-dpaa2_uses_dpdk = yes
-dpaa2_uses_external_dpdk = yes
-dpaa2_dpdk_inc_dir = $(DPDK_PATH)/include/dpdk
-dpaa2_dpdk_lib_dir = $(DPDK_PATH)/lib
+#dpaa_dpdk_shared_lib = yes
+dpaa_uses_external_dpdk = yes
+dpaa_dpdk_inc_dir = $(DPDK_PATH)/include/dpdk
+dpaa_dpdk_lib_dir = $(DPDK_PATH)/lib
 else
 # compile using internal DPDK + NXP DPAA2 Driver patch
-dpaa2_dpdk_arch = "armv8a"
-dpaa2_dpdk_target = "arm64-dpaa-linuxapp-gcc"
-dpaa2_dpdk_make_extra_args = "CONFIG_RTE_KNI_KMOD=n"
+dpaa_dpdk_arch = "armv8a"
+dpaa_dpdk_target = "arm64-dpaa-linuxapp-gcc"
+dpaa_dpdk_make_extra_args = "CONFIG_RTE_KNI_KMOD=n"
 endif
 endif
 
 ifneq ($(ARMV8_CRYPTO_LIB_PATH),)
-dpaa2_uses_armv8_crypto_lib = yes
+dpaa_uses_armv8_crypto_lib = yes
 endif
 
-vpp_configure_args_dpaa2 = --without-ipv6sr --with-pre-data=128\
+vpp_configure_args_dpaa = --without-ipv6sr --with-pre-data=128\
 	--disable-flowprobe-plugin --disable-ixge-plugin \
 	--disable-memif-plugin --disable-sixrd-plugin --disable-gtpu-plugin \
 	--disable-ioam-plugin --disable-lb-plugin --disable-ila-plugin \
 	--disable-nat-plugin --disable-l2e-plugin --disable-stn-plugin \
 	--disable-pppoe-plugin --disable-kubeproxy-plugin \
-	--disable-vom
+	--disable-vom	--disable-dpdk-plugin
 
 
 
-dpaa2_debug_TAG_CFLAGS = -g -O2 -DCLIB_DEBUG -fPIC -fstack-protector-all \
+dpaa_debug_TAG_CFLAGS = -g -O2 -DCLIB_DEBUG -fPIC -fstack-protector-all \
 			-march=$(MARCH) -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6
-dpaa2_debug_TAG_LDFLAGS = -g -O2 -DCLIB_DEBUG -fstack-protector-all \
+dpaa_debug_TAG_LDFLAGS = -g -O2 -DCLIB_DEBUG -fstack-protector-all \
 			-march=$(MARCH) -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6
 
 # Use -rdynamic is for stack tracing, O0 for debugging....default is O2
 # Use -DCLIB_LOG2_CACHE_LINE_BYTES to change cache line size
-dpaa2_TAG_CFLAGS = -g -O3 -fPIC -march=$(MARCH) -mcpu=$(dpaa2_mtune) \
-		-mtune=$(dpaa2_mtune) -funroll-all-loops -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6 -I$(OPENSSL_PATH)/include
-dpaa2_TAG_LDFLAGS = -g -O3 -fPIC -march=$(MARCH) -mcpu=$(dpaa2_mtune) \
-		-mtune=$(dpaa2_mtune) -funroll-all-loops -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6 -L$(OPENSSL_PATH)/lib
+dpaa_TAG_CFLAGS = -g -Ofast -fPIC -march=$(MARCH) -mcpu=$(dpaa_mtune) \
+		-mtune=$(dpaa_mtune) -funroll-all-loops -DCLIB_LOG2_CACHE_LINE_BYTES=6 -I$(OPENSSL_PATH)/include
+dpaa_TAG_LDFLAGS = -g -Ofast -fPIC -march=$(MARCH) -mcpu=$(dpaa_mtune) \
+		-mtune=$(dpaa_mtune) -funroll-all-loops -DCLIB_LOG2_CACHE_LINE_BYTES=6 -L$(OPENSSL_PATH)/lib
 
