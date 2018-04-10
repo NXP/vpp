@@ -28,6 +28,10 @@ if WITH_LIBSSL
 libvnet_la_LIBADD += -lcrypto
 endif
 
+if WITH_ARMV8_CRYPTO_LIB
+libvnet_la_LDFLAGS += -Wl,--exclude-libs,libarmv8_crypto.a,-l:libarmv8_crypto.a
+endif
+
 ########################################
 # Generic stuff
 ########################################
