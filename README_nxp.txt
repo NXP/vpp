@@ -49,6 +49,12 @@ $ make V=0 PLATFORM=dpaa TAG=dpaa install-rpm
  Runtime  Notes :
 ###########################################################
 
+- For LS1012, due to less available memory we have to use minimum Hugepages.
+  So, please decrease/set the number of Hugepages to 32 (64 MB), using following command.
+
+	$   echo 32 > /proc/sys/vm/nr_hugepages
+
+
 - We have separate VPP start up Configuration files for LS1012 & LS104x/LS102x
 
 	For LS1012 please use:
