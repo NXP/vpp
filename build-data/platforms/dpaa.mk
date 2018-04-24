@@ -76,11 +76,10 @@ vpp_configure_args_dpaa = --without-ipv6sr --with-pre-data=128\
 	--disable-vom	--disable-dpdk-plugin
 
 
-
-dpaa_debug_TAG_CFLAGS = -g -O2 -DCLIB_DEBUG -fPIC -fstack-protector-all \
-			-march=$(MARCH) -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6
-dpaa_debug_TAG_LDFLAGS = -g -O2 -DCLIB_DEBUG -fstack-protector-all \
-			-march=$(MARCH) -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6
+dpaa_debug_TAG_CFLAGS = -g -O0 -DCLIB_DEBUG=1 -fPIC -fstack-protector-all -DFORTIFY_SOURCE=2 \
+			-march=$(MARCH) -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6 -I$(OPENSSL_PATH)/include
+dpaa_debug_TAG_LDFLAGS = -g -O0 -DCLIB_DEBUG=1 -fstack-protector-all -DFORTIFY_SOURCE=2 \
+			-march=$(MARCH) -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6 -L$(OPENSSL_PATH)/lib
 
 # Use -rdynamic is for stack tracing, O0 for debugging....default is O2
 # Use -DCLIB_LOG2_CACHE_LINE_BYTES to change cache line size

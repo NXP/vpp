@@ -30,6 +30,7 @@ void BV (clib_bihash_init)
   h->cache_misses = 0;
 
   h->mheap = mheap_alloc (0 /* use VM */ , memory_size);
+  ASSERT(h->mheap);
 
   oldheap = clib_mem_set_heap (h->mheap);
   vec_validate_aligned (h->buckets, nbuckets - 1, CLIB_CACHE_LINE_BYTES);
