@@ -105,8 +105,8 @@ dpdk_crypto_dequeue (vlib_main_t * vm, vlib_node_runtime_t * node,
   do
     {
       ops = cwm->ops;
-      n_ops = rte_cryptodev_dequeue_burst (res->dev_id,
-					   res->qp_id + outbound,
+      n_ops = rte_cryptodev_dequeue_burst (res->dev_id + outbound,
+					   res->qp_id,
 					   ops, VLIB_FRAME_SIZE);
       res->inflights[outbound] -= n_ops;
       ASSERT (res->inflights >= 0);

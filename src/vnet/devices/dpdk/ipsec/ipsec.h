@@ -296,7 +296,7 @@ crypto_enqueue_ops (vlib_main_t * vm, crypto_worker_main_t * cwm, u8 outbound,
       if (!res->n_ops)
 	continue;
 
-      enq = rte_cryptodev_enqueue_burst (res->dev_id, res->qp_id + outbound,
+      enq = rte_cryptodev_enqueue_burst (res->dev_id + outbound, res->qp_id,
 					 res->ops, res->n_ops);
       res->inflights[outbound] += enq;
 
