@@ -650,6 +650,9 @@ crypto_dev_conf (u8 dev, u16 n_qp, u8 numa)
 	return clib_error_return (0, error_str, dev, qp);
     }
 
+  if (rte_cryptodev_start(dev))
+	printf("Failed to start cryptodev %u\n", dev);
+
   return 0;
 }
 
