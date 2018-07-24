@@ -121,9 +121,10 @@ linux_epoll_input (vlib_main_t * vm,
     f64 vector_rate = vlib_last_vectors_per_main_loop (vm);
 
     /* If we're not working very hard, decide how long to sleep */
-    if (vector_rate < 2 && vm->api_queue_nonempty == 0
-	&& nm->input_node_counts_by_state[VLIB_NODE_STATE_POLLING] == 0)
-      {
+    if (vector_rate < 2 && vm->api_queue_nonempty == 0)
+    {
+	if (nm->input_node_counts_by_state[VLIB_NODE_STATE_POLLING] == 0) {
+
 	ticks_until_expiration = TW (tw_timer_first_expires_in_ticks)
 	  ((TWT (tw_timer_wheel) *) nm->timing_wheel);
 
@@ -146,6 +147,7 @@ linux_epoll_input (vlib_main_t * vm,
 		timeout_ms = clib_min (max_timeout_ms, timeout_ms);
 	      }
 	  }
+	}
 	node->input_main_loops_per_call = 0;
       }
     else			/* busy */
