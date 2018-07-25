@@ -36,7 +36,7 @@ install-deb: $(patsubst %,%-find-source,$(ROOT_PACKAGES))
 	find $(INSTALL_PREFIX)$(ARCH)/*/lib* \( -type f -o  -type l \)  \
 	  -print | egrep -e '*\.so\.*\.*\.*'				\
 	  | grep -v plugins\/						\
-	  | sed -e 's:.*:../& /usr/lib/x86_64-linux-gnu:'		\
+	  | sed -e 's:.*:../& /usr/lib64/:'				\
 	    > deb/debian/vpp-lib.install ;				\
 									\
 	: vnet api definitions ;					\
@@ -91,7 +91,7 @@ install-deb: $(patsubst %,%-find-source,$(ROOT_PACKAGES))
 	: Go fabricate the actual Debian packages ;			\
 	(								\
 	cd deb &&							\
-	dpkg-buildpackage -us -uc -b					\
+	dpkg-buildpackage -us -uc -b -aarm64				\
 	)
 
 .PHONY: install-rpm
