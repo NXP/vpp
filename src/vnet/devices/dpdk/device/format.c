@@ -320,6 +320,10 @@ format_dpdk_device_type (u8 * s, va_list * args)
       dev_type = "NXP DPAA2 Mac";
       break;
 
+    case VNET_DPDK_PMD_DPAA:
+      dev_type = "NXP DPAA Mac";
+      break;
+
     case VNET_DPDK_PMD_VIRTIO_USER:
       dev_type = "Virtio User";
       break;

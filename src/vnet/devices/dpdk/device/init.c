@@ -363,7 +363,8 @@ dpdk_lib_init (dpdk_main_t * dm)
 	      break;
 
 	    case VNET_DPDK_PMD_DPAA2:
-	      xd->port_type = VNET_DPDK_PORT_TYPE_ETH_10G;
+	    case VNET_DPDK_PMD_DPAA:
+	      xd->port_type = port_type_from_speed_capa (&dev_info);
 	      break;
 
 	      /* Cisco VIC */
