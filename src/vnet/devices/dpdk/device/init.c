@@ -872,6 +872,9 @@ dpdk_config (vlib_main_t * vm, unformat_input_t * input)
       else if (unformat (input, "no-tx-checksum-offload"))
 	conf->no_tx_checksum_offload = 1;
 
+      else if (unformat (input, "enable-lookaside-proto-offload"))
+	conf->en_lookaside_proto_offload = 1;
+
       else if (unformat (input, "decimal-interface-names"))
 	conf->interface_name_format_decimal = 1;
 
