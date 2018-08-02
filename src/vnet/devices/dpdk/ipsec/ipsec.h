@@ -23,6 +23,7 @@
 #include <rte_config.h>
 #include <rte_crypto.h>
 #include <rte_cryptodev.h>
+#include <rte_security.h>
 
 #if CLIB_DEBUG > 0
 #define always_inline static inline
@@ -149,6 +150,7 @@ typedef struct
   crypto_drv_t *drv;
   u64 session_timeout;		/* nsec */
   u8 enabled;
+  u8 lookaside_proto_offload;
 } dpdk_crypto_main_t;
 
 extern dpdk_crypto_main_t dpdk_crypto_main;

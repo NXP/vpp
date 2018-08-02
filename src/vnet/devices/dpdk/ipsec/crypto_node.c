@@ -148,6 +148,18 @@ dpdk_crypto_dequeue (vlib_main_t * vm, vlib_node_runtime_t * node,
 	      b0 = vlib_buffer_from_rte_mbuf (op->sym[0].m_src);
 	      bi0 = vlib_get_buffer_index (vm, b0);
 
+	      /* Update vlib_buffer if protocol offload enabled */
+	      if (dcm->lookaside_proto_offload) {
+		  word diff;
+		  u8 *new_data, *cur_data = vlib_buffer_get_current(b0);
+		  struct rte_mbuf *mbuf = op->sym[0].m_src;
+
+		  new_data = rte_pktmbuf_mtod(mbuf, u8 *);
+		  diff = new_data - cur_data;
+		  b0->current_data += diff;
+		  b0->current_length = mbuf->data_len;
+	      }
+
 	      to_next[0] = bi0;
 	      to_next += 1;
 

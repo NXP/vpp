@@ -508,6 +508,203 @@ VLIB_REGISTER_NODE (dpdk_esp_encrypt_node) = {
 /* *INDENT-ON* */
 
 VLIB_NODE_FUNCTION_MULTIARCH (dpdk_esp_encrypt_node, dpdk_esp_encrypt_node_fn)
+
+
+
+#define foreach_esp_proto_encrypt_next	\
+_(DPDK_ESP, "dpdk-esp-encrypt")		\
+_(DROP, "error-drop")
+
+#define _(v, s) ESP_PROTO_ENCRYPT_NEXT_##v,
+typedef enum
+{
+  foreach_esp_proto_encrypt_next
+#undef _
+    ESP_PROTO_ENCRYPT_N_NEXT,
+} esp_proto_encrypt_next_t;
+
+vlib_node_registration_t dpdk_esp_proto_encrypt_node;
+
+static uword
+dpdk_esp_proto_encrypt_node_fn (vlib_main_t * vm,
+			  vlib_node_runtime_t * node,
+			  vlib_frame_t * from_frame)
+{
+  u32 n_left_from, *from, *to_next, next_index;
+  ipsec_main_t *im = &ipsec_main;
+  u32 thread_idx = vlib_get_thread_index ();
+  dpdk_crypto_main_t *dcm = &dpdk_crypto_main;
+  crypto_resource_t *res = 0;
+  ipsec_sa_t *sa0 = 0;
+  struct rte_security_session *session = 0;
+  u32 ret, last_sa_index = ~0;
+  u8 numa = rte_socket_id ();
+  crypto_worker_main_t *cwm =
+    vec_elt_at_index (dcm->workers_main, thread_idx);
+  struct rte_crypto_op **ops = cwm->ops;
+  struct rte_crypto_sym_op *sym_op;
+
+  from = vlib_frame_vector_args (from_frame);
+  n_left_from = from_frame->n_vectors;
+
+  ret = crypto_alloc_ops (numa, ops, n_left_from);
+  if (ret)
+    {
+      vlib_node_increment_counter (vm, dpdk_esp_proto_encrypt_node.index,
+				   ESP_ENCRYPT_ERROR_DISCARD, 1);
+      /* Discard whole frame */
+      return n_left_from;
+    }
+
+  next_index = ESP_PROTO_ENCRYPT_NEXT_DROP;
+
+  while (n_left_from > 0)
+    {
+      u32 n_left_to_next;
+
+      vlib_get_next_frame (vm, node, next_index, to_next, n_left_to_next);
+
+      while (n_left_from > 0 && n_left_to_next > 0)
+	{
+	  clib_error_t *error;
+	  u32 bi0;
+	  vlib_buffer_t *b0 = 0;
+	  u32 sa_index0;
+	  struct rte_mbuf *mb0 = 0;
+	  struct rte_crypto_op *op;
+	  u16 res_idx;
+
+	  bi0 = from[0];
+	  from += 1;
+	  n_left_from -= 1;
+
+	  b0 = vlib_get_buffer (vm, bi0);
+	  mb0 = rte_mbuf_from_vlib_buffer (b0);
+
+	  /* mb0 */
+	  CLIB_PREFETCH (mb0, CLIB_CACHE_LINE_BYTES, STORE);
+
+	  op = ops[0];
+	  ops += 1;
+	  ASSERT (op->status == RTE_CRYPTO_OP_STATUS_NOT_PROCESSED);
+
+	  dpdk_op_priv_t *priv = crypto_op_get_priv (op);
+
+	  u16 op_len =
+	    sizeof (op[0]) + sizeof (op[0].sym[0]) + sizeof (priv[0]);
+	  CLIB_PREFETCH (op, op_len, STORE);
+
+	  sa_index0 = vnet_buffer (b0)->ipsec.sad_index;
+
+	  if (sa_index0 != last_sa_index)
+	    {
+	      sa0 = pool_elt_at_index (im->sad, sa_index0);
+	      res_idx = get_resource (cwm, sa0);
+
+	      if (PREDICT_FALSE (res_idx == (u16) ~ 0))
+		{
+		  clib_warning ("unsupported SA by thread index %u",
+				thread_idx);
+		  vlib_node_increment_counter (vm,
+					       dpdk_esp_proto_encrypt_node.index,
+					       ESP_ENCRYPT_ERROR_NOSUP, 1);
+		  to_next[0] = bi0;
+		  to_next += 1;
+		  n_left_to_next -= 1;
+		  goto trace;
+		}
+	      res = vec_elt_at_index (dcm->resource, res_idx);
+
+	      error = crypto_get_session (
+			      (struct rte_cryptodev_sym_session **)&session,
+			      sa_index0,
+			      res,
+			      cwm,
+			      1);
+	      if (PREDICT_FALSE (error || !session))
+		{
+		  clib_warning ("failed to get crypto session");
+		  vlib_node_increment_counter (vm,
+					       dpdk_esp_proto_encrypt_node.index,
+					       ESP_ENCRYPT_ERROR_SESSION, 1);
+		  to_next[0] = bi0;
+		  to_next += 1;
+		  n_left_to_next -= 1;
+		  goto trace;
+		}
+
+	      last_sa_index = sa_index0;
+	    }
+
+	  rte_security_attach_session(op, session);
+
+	  sym_op = (struct rte_crypto_sym_op *) (op + 1);
+	  sym_op->m_src = mb0;
+
+	  /* TODO multi-seg support - total_length_not_including_first_buffer */
+	  sa0->total_data_size += b0->current_length;
+
+	  res->ops[res->n_ops] = op;
+	  res->bi[res->n_ops] = bi0;
+	  res->n_ops += 1;
+
+	  mb0->data_len = b0->current_length;
+	  mb0->pkt_len = b0->current_length;
+	  mb0->data_off += b0->current_data;
+	  /* in tunnel mode send it back to FIB */
+	  priv->next = DPDK_CRYPTO_INPUT_NEXT_IP4_LOOKUP;
+
+	  vnet_buffer (b0)->sw_if_index[VLIB_TX] = (u32) ~ 0;
+	  vnet_buffer (b0)->sw_if_index[VLIB_RX] =
+	    vnet_buffer (b0)->sw_if_index[VLIB_RX];
+	  b0->flags |= VLIB_BUFFER_TOTAL_LENGTH_VALID;
+
+	trace:
+	  if (PREDICT_FALSE (b0->flags & VLIB_BUFFER_IS_TRACED))
+	    {
+	      esp_encrypt_trace_t *tr =
+		vlib_add_trace (vm, node, b0, sizeof (*tr));
+	      tr->crypto_alg = sa0->crypto_alg;
+	      tr->integ_alg = sa0->integ_alg;
+	      u8 *p = vlib_buffer_get_current (b0);
+	      if (!sa0->is_tunnel)
+		p += vnet_buffer (b0)->ip.save_rewrite_length;
+	      clib_memcpy (tr->packet_data, p, sizeof (tr->packet_data));
+	    }
+	}
+      vlib_put_next_frame (vm, node, next_index, n_left_to_next);
+    }
+  vlib_node_increment_counter (vm, dpdk_esp_proto_encrypt_node.index,
+			       ESP_ENCRYPT_ERROR_RX_PKTS,
+			       from_frame->n_vectors);
+
+  crypto_enqueue_ops (vm, cwm, 1, dpdk_esp_proto_encrypt_node.index,
+		      ESP_ENCRYPT_ERROR_ENQ_FAIL, numa);
+
+  crypto_free_ops (numa, ops, cwm->ops + from_frame->n_vectors - ops);
+
+  return from_frame->n_vectors;
+}
+
+/* *INDENT-OFF* */
+VLIB_REGISTER_NODE (dpdk_esp_proto_encrypt_node) = {
+  .function = dpdk_esp_proto_encrypt_node_fn,
+  .name = "dpdk-esp-proto-encrypt",
+  .flags = VLIB_NODE_FLAG_IS_OUTPUT,
+  .vector_size = sizeof (u32),
+  .format_trace = format_esp_encrypt_trace,
+  .n_errors = ARRAY_LEN (esp_encrypt_error_strings),
+  .error_strings = esp_encrypt_error_strings,
+  .n_next_nodes = ESP_PROTO_ENCRYPT_N_NEXT,
+  .next_nodes =
+    {
+      [ESP_PROTO_ENCRYPT_NEXT_DPDK_ESP] = "dpdk-esp-encrypt",
+      [ESP_PROTO_ENCRYPT_NEXT_DROP] = "error-drop",
+    }
+};
+VLIB_NODE_FUNCTION_MULTIARCH (dpdk_esp_proto_encrypt_node, dpdk_esp_proto_encrypt_node_fn)
+/* *INDENT-ON* */
+
 /*
  * fd.io coding-style-patch-verification: ON
  *

@@ -315,6 +315,54 @@ crypto_set_auth_xform (struct rte_crypto_sym_xform *xform,
     xform->auth.op = RTE_CRYPTO_AUTH_OP_VERIFY;
 }
 
+static inline struct rte_security_session *
+create_security_session (struct rte_crypto_sym_xform *xfs,
+		    ipsec_sa_t *sa,
+		    crypto_resource_t * res,
+		    u8 is_outbound)
+{
+#define IPDEFTTL 64
+  dpdk_crypto_main_t *dcm = &dpdk_crypto_main;
+  crypto_data_t *data;
+  struct rte_security_ctx *ctx;
+  struct rte_mempool **mp;
+  struct rte_security_ipsec_tunnel_param *tunnel;
+  struct rte_security_session_conf sess_conf = {
+			.action_type = RTE_SECURITY_ACTION_TYPE_LOOKASIDE_PROTOCOL,
+			.protocol = RTE_SECURITY_PROTOCOL_IPSEC,
+			{.ipsec = {
+				.options = { 0 },
+				.proto = RTE_SECURITY_IPSEC_SA_PROTO_ESP,
+				.mode = RTE_SECURITY_IPSEC_SA_MODE_TUNNEL,
+			} },
+
+		};
+
+  data = vec_elt_at_index (dcm->data, res->numa);
+
+  /* Set remaining Security Fields */
+  sess_conf.ipsec.spi = sa->spi;
+  sess_conf.ipsec.salt = sa->salt;
+  sess_conf.ipsec.direction = is_outbound ? RTE_SECURITY_IPSEC_SA_DIR_EGRESS:
+					RTE_SECURITY_IPSEC_SA_DIR_INGRESS;
+  sess_conf.crypto_xform = xfs;
+
+  tunnel = &sess_conf.ipsec.tunnel;
+  tunnel->type = RTE_SECURITY_IPSEC_TUNNEL_IPV4;
+  tunnel->ipv4.ttl = IPDEFTTL;
+  memcpy((uint8_t *)&tunnel->ipv4.src_ip,
+		  (uint8_t *)&sa->tunnel_src_addr.ip4.as_u32, 4);
+  memcpy((uint8_t *)&tunnel->ipv4.dst_ip,
+		  (uint8_t *)&sa->tunnel_dst_addr.ip4.as_u32, 4);
+
+
+  ctx = (struct rte_security_ctx *) rte_cryptodev_get_sec_ctx(res->dev_id);
+  mp = vec_elt_at_index (data->session_drv, res->drv_id);
+  ASSERT (mp[0] != NULL);
+
+  return rte_security_session_create(ctx, &sess_conf, mp[0]);
+}
+
 clib_error_t *
 create_sym_session (struct rte_cryptodev_sym_session **session,
 		    u32 sa_idx,
@@ -330,6 +378,7 @@ create_sym_session (struct rte_cryptodev_sym_session **session,
   struct rte_crypto_sym_xform *xfs;
   struct rte_cryptodev_sym_session **s;
   crypto_session_key_t key = { 0 };
+
 
   key.drv_id = res->drv_id;
   key.sa_idx = sa_idx;
@@ -362,6 +411,13 @@ create_sym_session (struct rte_cryptodev_sym_session **session,
 	}
     }
 
+  if (dcm->lookaside_proto_offload) {
+    session[0] = (struct rte_cryptodev_sym_session *)
+	  create_security_session (xfs, sa, res, is_outbound);
+    if (NULL == session[0])
+	  return clib_error_return (0, "failed to create security session");
+
+  } else {
   /*
    * DPDK_VER >= 1708:
    *   Multiple worker/threads share the session for an SA
@@ -394,9 +450,9 @@ create_sym_session (struct rte_cryptodev_sym_session **session,
       return clib_error_return (0, "failed to init session for drv %u",
 				res->drv_id);
     }
+  }
 
   hash_set (data->session_by_drv_id_and_sa_index, key.val, session[0]);
-
   return 0;
 }
 
@@ -659,6 +715,7 @@ crypto_dev_conf (u8 dev, u16 n_qp, u8 numa)
 static void
 crypto_scan_devs (u32 n_mains)
 {
+  dpdk_config_main_t *conf = &dpdk_config_main;
   dpdk_crypto_main_t *dcm = &dpdk_crypto_main;
   struct rte_cryptodev *cryptodev;
   struct rte_cryptodev_info info;
@@ -695,6 +752,14 @@ crypto_scan_devs (u32 n_mains)
 
       if (!(info.feature_flags & RTE_CRYPTODEV_FF_SYM_OPERATION_CHAINING))
 	continue;
+
+      /* Enable Crypto Protocol Offload only if driver supports that */
+      if (conf->en_lookaside_proto_offload &&
+	(info.feature_flags & RTE_CRYPTODEV_FF_SECURITY))
+		dcm->lookaside_proto_offload = 1;
+
+      printf("IPSec Protocol offload %s for dev %s\n",
+			dcm->lookaside_proto_offload ? "Enabled" : "Disabled", dev->name);
 
       if ((error = crypto_dev_conf (i, dev->max_qp, dev->numa)))
 	{
@@ -1039,7 +1104,10 @@ dpdk_ipsec_process (vlib_main_t * vm, vlib_node_runtime_t * rt,
   /* Add new next node and set it as default */
   vlib_node_t *node, *next_node;
 
-  next_node = vlib_get_node_by_name (vm, (u8 *) "dpdk-esp-encrypt");
+  if (dcm->lookaside_proto_offload)
+	next_node = vlib_get_node_by_name (vm, (u8 *) "dpdk-esp-proto-encrypt");
+  else
+	next_node = vlib_get_node_by_name (vm, (u8 *) "dpdk-esp-encrypt");
   ASSERT (next_node);
   node = vlib_get_node_by_name (vm, (u8 *) "ipsec-output-ip4");
   ASSERT (node);
@@ -1047,7 +1115,10 @@ dpdk_ipsec_process (vlib_main_t * vm, vlib_node_runtime_t * rt,
   im->esp_encrypt_next_index =
     vlib_node_add_next (vm, node->index, next_node->index);
 
-  next_node = vlib_get_node_by_name (vm, (u8 *) "dpdk-esp-decrypt");
+  if (dcm->lookaside_proto_offload)
+	next_node = vlib_get_node_by_name (vm, (u8 *) "dpdk-esp-proto-decrypt");
+  else
+	next_node = vlib_get_node_by_name (vm, (u8 *) "dpdk-esp-decrypt");
   ASSERT (next_node);
   node = vlib_get_node_by_name (vm, (u8 *) "ipsec-input-ip4");
   ASSERT (node);
