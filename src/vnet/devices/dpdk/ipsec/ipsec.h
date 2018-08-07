@@ -293,12 +293,23 @@ crypto_enqueue_ops (vlib_main_t * vm, crypto_worker_main_t * cwm, u8 outbound,
   vec_foreach (res_idx, cwm->resource_idx)
     {
       u16 enq;
+      u8 dev_id;
+      u16 qp_id;
+
       res = vec_elt_at_index (dcm->resource, res_idx[0]);
 
       if (!res->n_ops)
 	continue;
 
-      enq = rte_cryptodev_enqueue_burst (res->dev_id + outbound, res->qp_id,
+      if (dcm->dev->max_qp > 1) {
+	dev_id = res->dev_id;
+	qp_id = res->qp_id + outbound;
+      } else {
+	dev_id = res->dev_id + outbound;
+	qp_id = res->qp_id;
+      }
+
+      enq = rte_cryptodev_enqueue_burst (dev_id, qp_id,
 					 res->ops, res->n_ops);
       res->inflights[outbound] += enq;
 

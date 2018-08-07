@@ -99,14 +99,24 @@ dpdk_crypto_dequeue (vlib_main_t * vm, vlib_node_runtime_t * node,
   crypto_worker_main_t *cwm =
     vec_elt_at_index (dcm->workers_main, thread_idx);
   struct rte_crypto_op **ops;
+  u8 dev_id;
+  u16 qp_id;
+
+  if (dcm->dev->max_qp > 1) {
+	dev_id = res->dev_id;
+	qp_id = res->qp_id + outbound;
+  } else {
+	dev_id = res->dev_id + outbound;
+	qp_id = res->qp_id;
+  }
 
   next_index = node->cached_next_index;
 
   do
     {
       ops = cwm->ops;
-      n_ops = rte_cryptodev_dequeue_burst (res->dev_id + outbound,
-					   res->qp_id,
+      n_ops = rte_cryptodev_dequeue_burst (dev_id,
+					   qp_id,
 					   ops, VLIB_FRAME_SIZE);
       res->inflights[outbound] -= n_ops;
       ASSERT (res->inflights >= 0);
