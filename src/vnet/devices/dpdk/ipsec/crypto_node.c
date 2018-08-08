@@ -191,7 +191,7 @@ dpdk_crypto_dequeue (vlib_main_t * vm, vlib_node_runtime_t * node,
 
       crypto_free_ops (numa, cwm->ops, n_deq);
     }
-  while (n_deq == VLIB_FRAME_SIZE && res->inflights[outbound]);
+  while (res->inflights[outbound]);
 
   vlib_node_increment_counter (vm, dpdk_crypto_input_node.index,
 			       DPDK_CRYPTO_INPUT_ERROR_DQ_COPS, total_n_deq);
