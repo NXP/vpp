@@ -27,6 +27,7 @@ dpaa_cross_ldflags = \
 	-Wl,--dynamic-linker=/lib/ld-linux-aarch64.so.1 \
 	-Wl,-rpath=/usr/lib64 \
 	-Wl,-rpath=./.libs \
+	-Wl,-rpath=$(EXTRA_LIBS)/. \
 	-Wl,-rpath=$(OPENSSL_PATH)/lib
 endif
 
@@ -84,7 +85,7 @@ dpaa_debug_TAG_LDFLAGS = -g -O0 -DCLIB_DEBUG=1 -fstack-protector-all -DFORTIFY_S
 # Use -rdynamic is for stack tracing, O0 for debugging....default is O2
 # Use -DCLIB_LOG2_CACHE_LINE_BYTES to change cache line size
 dpaa_TAG_CFLAGS = -g -Ofast -fPIC -march=$(MARCH) -mcpu=$(dpaa_mtune) \
-		-mtune=$(dpaa_mtune) -funroll-all-loops -DCLIB_LOG2_CACHE_LINE_BYTES=6 -I$(OPENSSL_PATH)/include
+		-mtune=$(dpaa_mtune) -funroll-all-loops -DCLIB_LOG2_CACHE_LINE_BYTES=6 -I$(OPENSSL_PATH)/include -I$(EXTRA_INC)/.
 dpaa_TAG_LDFLAGS = -g -Ofast -fPIC -march=$(MARCH) -mcpu=$(dpaa_mtune) \
-		-mtune=$(dpaa_mtune) -funroll-all-loops -DCLIB_LOG2_CACHE_LINE_BYTES=6 -L$(OPENSSL_PATH)/lib
+		-mtune=$(dpaa_mtune) -funroll-all-loops -DCLIB_LOG2_CACHE_LINE_BYTES=6 -L$(OPENSSL_PATH)/lib -L$(EXTRA_LIBS)/.
 
