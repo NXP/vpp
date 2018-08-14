@@ -21,6 +21,10 @@ export PYBUILD_DIR = ../../src/vpp-api/python
 export PYBUILD_DESTDIR_python2=debian/vpp-api-python/
 export PYBUILD_DISABLE_python2=test
 export PYBUILD_SYSTEM=distutils
+ifeq ($(shell lsb_release -rs), 18.04)
+export PYBUILD_INTERPRETERS=python2
+endif
+#export PYBUILD_VERSIONS=2.7
 
 # main packaging script based on dh7 syntax
 %:
