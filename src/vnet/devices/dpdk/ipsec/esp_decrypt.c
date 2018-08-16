@@ -2,6 +2,7 @@
  * esp_decrypt.c : IPSec ESP Decrypt node using DPDK Cryptodev
  *
  * Copyright (c) 2017 Intel and/or its affiliates.
+ * Copyright 2018 NXP
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a opy of the License at:
