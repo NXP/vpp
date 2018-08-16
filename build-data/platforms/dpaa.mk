@@ -1,4 +1,4 @@
-# Copyright (c) 2016 Freescale Semiconductor, Inc. All rights reserved.
+# Copyright 2018 NXP
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at:
@@ -11,7 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Configuration for NXP DPAA2 ARM64 based platform
+# Configuration for NXP DPAA1/DPAA2 ARM64 based platform
 MACHINE=$(shell uname -m)
 
 dpaa_mtune = cortex-A72
