@@ -230,7 +230,7 @@ auth_cap_to_alg (const struct rte_cryptodev_capabilities *cap, u8 trunc_size)
   vec_foreach (alg, dcm->auth_algs)
     {
       if ((cap->sym.auth.algo == alg->alg) &&
-	  (alg->trunc_size == trunc_size))
+	      (trunc_size >= alg->trunc_size))
 	return alg;
     }
   /* *INDENT-ON* */
