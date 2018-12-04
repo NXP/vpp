@@ -276,7 +276,7 @@ ifeq ($(OS_ID)-$(OS_VERSION_ID),debian-8)
 	@grep -q jessie-backports /etc/apt/sources.list /etc/apt/sources.list.d/* 2> /dev/null \
            || ( echo "Please install jessie-backports" ; exit 1 )
 endif
-	@sudo -E apt-get update
+	@sudo -E apt-get update -y
 	@sudo -E apt-get $(APT_ARGS) $(CONFIRM) $(FORCE) install $(DEB_DEPENDS)
 else ifneq ("$(wildcard /etc/redhat-release)","")
 	@sudo -E yum groupinstall $(CONFIRM) $(RPM_DEPENDS_GROUPS)
@@ -519,7 +519,7 @@ verify: install-dep $(BR)/.bootstrap.ok dpdk-install-dev
 	@make -C build-root PLATFORM=vpp TAG=vpp wipe-all install-packages
 ifeq ($(OS_ID)-$(OS_VERSION_ID),ubuntu-16.04)
 	$(call banner,"Installing dependencies")
-	@sudo -E apt-get update
+	@sudo -E apt-get update -y
 	@sudo -E apt-get $(CONFIRM) $(FORCE) install clang
 	$(call banner,"Building for PLATFORM=vpp using clang")
 	@make -C build-root CC=clang PLATFORM=vpp TAG=vpp_clang wipe-all install-packages
