@@ -31,6 +31,7 @@ vpp_cmake_args += -DCMAKE_PREFIX_PATH:PATH="$(vpp_cmake_prefix_path)"
 ifeq ("$(V)","1")
 vpp_cmake_args += -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
 endif
+vpp_cmake_args += -DCMAKE_TOOLCHAIN_FILE=/home/b32168/Work/fd.io/vpp_up/toolchain.cmake
 
 # Use devtoolset on centos 7
 ifneq ($(wildcard /opt/rh/devtoolset-7/enable),)

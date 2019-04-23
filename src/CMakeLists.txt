@@ -40,6 +40,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_C_FLAGS_COMMON "-DFORTIFY_SOURCE=2 -fstack-protector-all -Werror")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_COMMON} -DCLIB_DEBUG")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CMAKE_C_FLAGS_COMMON}")
+#set(CMAKE_C_COMPILER /home/b32168/Work/toolchain/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-gcc)
+#set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
 
 check_c_compiler_flag("-Wno-address-of-packed-member" compiler_flag_no_address_of_packed_member)
 if (compiler_flag_no_address_of_packed_member)

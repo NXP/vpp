@@ -14,9 +14,10 @@
 ##############################################################################
 # Find lib and include files
 ##############################################################################
-find_path(DPDK_INCLUDE_DIR PATH_SUFFIXES dpdk NAMES rte_config.h)
+find_path(DPDK_INCLUDE_DIR PATH_SUFFIXES include NAMES rte_config.h path ${CMAKE_PREFIX_PATH})
 find_library(DPDK_LIB NAMES libdpdk.a)
 
+  message(WARNING "-- DPDK DPDK_INCLUDE_DIR = (${DPDK_INCLUDE_DIR}) ${CMAKE_PREFIX_PATH}")
 if (NOT DPDK_INCLUDE_DIR)
   message(WARNING "-- DPDK not found - dpdk_plugin disabled")
   return()
