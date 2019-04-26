@@ -73,7 +73,7 @@ endif
 
 
 dpaa_debug_TAG_CFLAGS = -g -O0 -DCLIB_DEBUG -fPIC -fstack-protector-all -DFORTIFY_SOURCE=2 -mtls-dialect=trad \
-			-march=$(MARCH) -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6 -I$(OPENSSL_PATH)/include
+			-march=$(MARCH) -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6 -I$(OPENSSL_PATH)/include -L$(OPENSSL_PATH)/lib
 dpaa_debug_TAG_LDFLAGS = -g -O0 -DCLIB_DEBUG -fstack-protector-all -DFORTIFY_SOURCE=2 \
 			-march=$(MARCH) -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6 -L$(OPENSSL_PATH)/lib
 

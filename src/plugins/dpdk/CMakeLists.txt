@@ -14,10 +14,9 @@
 ##############################################################################
 # Find lib and include files
 ##############################################################################
-find_path(DPDK_INCLUDE_DIR PATH_SUFFIXES include NAMES rte_config.h path ${CMAKE_PREFIX_PATH})
+find_path(DPDK_INCLUDE_DIR PATH_SUFFIXES dpdk NAMES rte_config.h)
 find_library(DPDK_LIB NAMES libdpdk.a)
 
-  message(WARNING "-- DPDK DPDK_INCLUDE_DIR = (${DPDK_INCLUDE_DIR}) ${CMAKE_PREFIX_PATH}")
 if (NOT DPDK_INCLUDE_DIR)
   message(WARNING "-- DPDK not found - dpdk_plugin disabled")
   return()
@@ -68,6 +67,8 @@ if(DPDK_VARS_COMPILED)
     OUTPUT_VARIABLE DPDK_VARS
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
+  message ("DPDK_VARS = " ${DPDK_VARS} )
+  if(DPDK_VARS)
   string(REPLACE "\n" ";" DPDK_VARS ${DPDK_VARS})
   foreach(v ${DPDK_VARS})
     string(REPLACE "=" ";" v ${v})
@@ -75,6 +76,7 @@ if(DPDK_VARS_COMPILED)
     list(GET v 1 value)
     set(DPDK_${name} ${value})
   endforeach()
+  endif()
 endif()
 
 file(REMOVE
@@ -112,7 +114,7 @@ if(DPDK_INCLUDE_DIR AND DPDK_LIB)
       message(STATUS "DPDK depends on libmnl, libibverbs, libmlx5 (Mellanox PMD requirement)")
     endif()
   endif()
-  set(DPDK_LINK_FLAGS "${DPDK_LINK_FLAGS} -Wl,-lnuma")
+#set(DPDK_LINK_FLAGS "${DPDK_LINK_FLAGS} -Wl,-lnuma")
   add_vpp_plugin(dpdk
     SOURCES
     buffer.c
