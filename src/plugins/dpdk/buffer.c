@@ -71,6 +71,7 @@
 #include <rte_mempool.h>
 #include <rte_mbuf.h>
 #include <rte_version.h>
+#include <rte_mbuf_pool_ops.h>
 
 #include <vlib/vlib.h>
 #include <vlib/unix/unix.h>
@@ -388,13 +389,14 @@ dpdk_pool_create (vlib_main_t * vm, u8 * pool_name, u32 elt_size,
   u32 size;
   i32 ret;
   uword i;
+  const char *mp_ops_name = rte_mbuf_best_mempool_ops();
 
   mp = rte_mempool_create_empty ((char *) pool_name, num_elts, elt_size,
 				 512, pool_priv_size, numa, 0);
   if (!mp)
     return clib_error_return (0, "failed to create %s", pool_name);
 
-  rte_mempool_set_ops_byname (mp, RTE_MBUF_DEFAULT_MEMPOOL_OPS, NULL);
+  rte_mempool_set_ops_byname (mp, mp_ops_name, NULL);
 
   size = rte_mempool_op_calc_mem_size_default (mp, num_elts, 21,
 					       &min_chunk_size, &align);
