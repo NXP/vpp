@@ -40,6 +40,7 @@ endif
 #  AESNI ?= y
 #  DPDK_BUILD_DEPS := ipsec-mb-install
 #else
+ #todo -fix for cross compile.
   AESNI ?= n
 #endif
 
@@ -63,7 +64,7 @@ ifeq ($(MACHINE),$(filter $(MACHINE),x86_64 i686))
 # ARM64
 ##############################################################################
 #else ifeq ($(MACHINE),aarch64)
-CROSS := /home/b32168/Work/toolchain/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
+CROSS :=
 export CROSS
 DPDK_TARGET           ?= arm64-dpaa2-linuxapp-gcc
 DPDK_MACHINE          ?= armv8a
