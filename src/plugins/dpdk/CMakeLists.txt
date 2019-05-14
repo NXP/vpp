@@ -67,6 +67,8 @@ if(DPDK_VARS_COMPILED)
     OUTPUT_VARIABLE DPDK_VARS
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
+  message ("DPDK_VARS = " ${DPDK_VARS} )
+  if(DPDK_VARS)
   string(REPLACE "\n" ";" DPDK_VARS ${DPDK_VARS})
   foreach(v ${DPDK_VARS})
     string(REPLACE "=" ";" v ${v})
@@ -74,6 +76,7 @@ if(DPDK_VARS_COMPILED)
     list(GET v 1 value)
     set(DPDK_${name} ${value})
   endforeach()
+  endif()
 endif()
 
 file(REMOVE
@@ -111,7 +114,7 @@ if(DPDK_INCLUDE_DIR AND DPDK_LIB)
       message(STATUS "DPDK depends on libmnl, libibverbs, libmlx5 (Mellanox PMD requirement)")
     endif()
   endif()
-  set(DPDK_LINK_FLAGS "${DPDK_LINK_FLAGS} -Wl,-lnuma")
+#set(DPDK_LINK_FLAGS "${DPDK_LINK_FLAGS} -Wl,-lnuma")
   add_vpp_plugin(dpdk
     SOURCES
     buffer.c

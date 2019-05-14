@@ -36,12 +36,13 @@ else
 DPDK_SOURCE := $(B)/dpdk-stable-$(DPDK_VERSION)
 endif
 
-ifeq ($(MACHINE),$(filter $(MACHINE),x86_64))
-  AESNI ?= y
-  DPDK_BUILD_DEPS := ipsec-mb-install
-else
+#ifeq ($(MACHINE),$(filter $(MACHINE),x86_64))
+#  AESNI ?= y
+#  DPDK_BUILD_DEPS := ipsec-mb-install
+#else
+ #todo -fix for cross compile.
   AESNI ?= n
-endif
+#endif
 
 ifneq (,$(findstring clang,$(CC)))
 DPDK_CC=clang
@@ -55,17 +56,17 @@ endif
 # Intel x86
 ##############################################################################
 ifeq ($(MACHINE),$(filter $(MACHINE),x86_64 i686))
-DPDK_TARGET           ?= $(MACHINE)-native-linuxapp-$(DPDK_CC)
-DPDK_MACHINE          ?= nhm
-DPDK_TUNE             ?= core-avx2
+#DPDK_TARGET           ?= $(MACHINE)-native-linuxapp-$(DPDK_CC)
+#DPDK_MACHINE          ?= nhm
+#DPDK_TUNE             ?= core-avx2
 
 ##############################################################################
 # ARM64
 ##############################################################################
-else ifeq ($(MACHINE),aarch64)
+#else ifeq ($(MACHINE),aarch64)
 CROSS :=
 export CROSS
-DPDK_TARGET           ?= arm64-armv8a-linuxapp-$(DPDK_CC)
+DPDK_TARGET           ?= arm64-dpaa2-linuxapp-gcc
 DPDK_MACHINE          ?= armv8a
 DPDK_TUNE             ?= generic
 
@@ -148,7 +149,7 @@ endif
 endif
 endif
 
-DPDK_EXTRA_CFLAGS += -L$(I)/lib -I$(I)/include
+DPDK_EXTRA_CFLAGS += -L$(I)/lib -I$(I)/include -L$(OPENSSL_PATH)/lib -I$(OPENSSL_PATH)/include
 
 # assemble DPDK make arguments
 DPDK_MAKE_ARGS := -C $(DPDK_SOURCE) -j $(JOBS) \
