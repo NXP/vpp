@@ -121,7 +121,7 @@ install -p -m 644 %{_mu_build_dir}/../src/vpp/conf/80-vpp.conf %{buildroot}/etc/
 mkdir -p -m755 %{buildroot}%{_libdir}
 mkdir -p -m755 %{buildroot}/etc/bash_completion.d
 mkdir -p -m755 %{buildroot}/usr/share/vpp
-for file in $(find %{_mu_build_dir}/%{_vpp_install_dir}/*/lib* -type f -name '*.so.*.*.*' -print )
+for file in $(find %{_mu_build_dir}/%{_vpp_install_dir}/*/lib* -type f -name '*.so.*.*' -print )
 do
 	install -p -m 755 $file %{buildroot}%{_libdir}
 done
@@ -138,7 +138,7 @@ do
 	install -p -m 644 $file %{buildroot}/usr/share/vpp/api
 done
 install -p -m 644 %{_mu_build_dir}/../src/scripts/vppctl_completion %{buildroot}/etc/bash_completion.d
-install -p -m 644 %{_mu_build_dir}/../src/scripts/vppctl-cmd-list %{buildroot}/usr/share/vpp
+#install -p -m 644 %{_mu_build_dir}/../src/scripts/vppctl-cmd-list %{buildroot}/usr/share/vpp
 
 # Lua bindings
 mkdir -p -m755 %{buildroot}/usr/share/doc/vpp/examples/lua/examples/cli
@@ -261,7 +261,7 @@ fi
 %{_libdir}/*
 /usr/share/vpp/api/*
 /etc/bash_completion.d/vppctl_completion
-/usr/share/vpp/vppctl-cmd-list
+#/usr/share/vpp/vppctl-cmd-list
 
 %files api-lua
 %defattr(644,root,root,644)
