@@ -253,10 +253,11 @@ dpdk_crypto_dequeue (vlib_main_t * vm, vlib_node_runtime_t * node,
       bi += 1;
     }
 
-  vlib_node_increment_counter (vm, node->node_index,
+  if (n_deq) {
+	vlib_node_increment_counter(vm, node->node_index,
 			       DPDK_CRYPTO_INPUT_ERROR_DQ_COPS, n_deq);
-
-  vlib_buffer_enqueue_to_next (vm, node, bis, nexts, n_deq);
+	vlib_buffer_enqueue_to_next(vm, node, bis, nexts, n_deq);
+  }
 
   crypto_free_ops (numa, cwm->ops, n_deq);
 
