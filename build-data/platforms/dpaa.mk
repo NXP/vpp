@@ -1,4 +1,4 @@
-# Copyright 2018 NXP
+# Copyright 2018-2019 NXP
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at:
@@ -27,7 +27,8 @@ dpaa_cross_ldflags = \
 	-Wl,--dynamic-linker=/lib/ld-linux-aarch64.so.1 \
 	-Wl,-rpath=/usr/lib64 \
 	-Wl,-rpath=./.libs \
-	-Wl,-rpath=$(OPENSSL_PATH)/lib
+	-Wl,-rpath=$(OPENSSL_PATH)/lib \
+	-Wl,-rpath=$(EXTRA_LIBS)
 endif
 
 # Re-write Default configuration, if requied
@@ -73,15 +74,16 @@ endif
 
 
 dpaa_debug_TAG_CFLAGS = -g -O0 -DCLIB_DEBUG -fPIC -fstack-protector-all -DFORTIFY_SOURCE=2 -mtls-dialect=trad \
-			-march=$(MARCH) -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6 -I$(OPENSSL_PATH)/include -L$(OPENSSL_PATH)/lib
+			-march=$(MARCH) -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6 -I$(OPENSSL_PATH)/include -L$(OPENSSL_PATH)/lib -I$(EXTRA_INC)
+
 dpaa_debug_TAG_LDFLAGS = -g -O0 -DCLIB_DEBUG -fstack-protector-all -DFORTIFY_SOURCE=2 \
-			-march=$(MARCH) -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6 -L$(OPENSSL_PATH)/lib
+			-march=$(MARCH) -Werror -DCLIB_LOG2_CACHE_LINE_BYTES=6 -L$(OPENSSL_PATH)/lib -L$(EXTRA_LIBS)
 
 
 # Use -rdynamic is for stack tracing, O0 for debugging....default is O2
 # Use -DCLIB_LOG2_CACHE_LINE_BYTES to change cache line size
-dpaa_TAG_CFLAGS = -g -Ofast -fPIC -march=$(MARCH) -mcpu=$(dpaa_mtune) -mtls-dialect=trad \
-		-mtune=$(dpaa_mtune) -funroll-all-loops -DCLIB_LOG2_CACHE_LINE_BYTES=6 -I$(OPENSSL_PATH)/include  -L$(OPENSSL_PATH)/lib
+dpaa_TAG_CFLAGS = -g -Ofast -fPIC -march=$(MARCH) -mcpu=$(dpaa_mtune) -mtls-dialect=trad -I$(EXTRA_INC) \
+		-mtune=$(dpaa_mtune) -funroll-all-loops -DCLIB_LOG2_CACHE_LINE_BYTES=6 -I$(OPENSSL_PATH)/include -L$(OPENSSL_PATH)/lib
 dpaa_TAG_LDFLAGS = -g -Ofast -fPIC -march=$(MARCH) -mcpu=$(dpaa_mtune) \
-		-mtune=$(dpaa_mtune) -funroll-all-loops -DCLIB_LOG2_CACHE_LINE_BYTES=6 -L$(OPENSSL_PATH)/lib
+		-mtune=$(dpaa_mtune) -funroll-all-loops -DCLIB_LOG2_CACHE_LINE_BYTES=6 -L$(OPENSSL_PATH)/lib -L$(EXTRA_LIBS)
 
