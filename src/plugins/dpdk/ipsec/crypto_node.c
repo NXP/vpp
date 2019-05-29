@@ -3,6 +3,7 @@
  * crypto_node.c - DPDK Cryptodev input node
  *
  * Copyright (c) 2017 Intel and/or its affiliates.
+ * Copyright 2019 NXP
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a opy of the License at:
@@ -213,6 +214,42 @@ dpdk_crypto_dequeue (vlib_main_t * vm, vlib_node_runtime_t * node,
       b2 = vlib_buffer_from_rte_mbuf (op2->sym[0].m_src);
       b3 = vlib_buffer_from_rte_mbuf (op3->sym[0].m_src);
 
+      /* Update vlib_buffer if protocol offload enabled */
+      if (dcm->lookaside_proto_offload)
+       {
+	 word diff;
+	 u8 *new_data, *cur_data;
+	 struct rte_mbuf *mbuf;
+
+	 mbuf = op0->sym[0].m_src;
+	 cur_data = vlib_buffer_get_current(b0);
+	 new_data = rte_pktmbuf_mtod(mbuf, u8 *);
+	 diff = new_data - cur_data;
+	 b0->current_data += diff;
+	 b0->current_length = mbuf->data_len;
+
+	 mbuf = op1->sym[0].m_src;
+	 cur_data = vlib_buffer_get_current(b1);
+	 new_data = rte_pktmbuf_mtod(mbuf, u8 *);
+	 diff = new_data - cur_data;
+	 b1->current_data += diff;
+	 b1->current_length = mbuf->data_len;
+
+	 mbuf = op2->sym[0].m_src;
+	 cur_data = vlib_buffer_get_current(b2);
+	 new_data = rte_pktmbuf_mtod(mbuf, u8 *);
+	 diff = new_data - cur_data;
+	 b2->current_data += diff;
+	 b2->current_length = mbuf->data_len;
+
+	 mbuf = op3->sym[0].m_src;
+	 cur_data = vlib_buffer_get_current(b3);
+	 new_data = rte_pktmbuf_mtod(mbuf, u8 *);
+	 diff = new_data - cur_data;
+	 b3->current_data += diff;
+	 b3->current_length = mbuf->data_len;
+      }
+
       bi[0] = vlib_get_buffer_index (vm, b0);
       bi[1] = vlib_get_buffer_index (vm, b1);
       bi[2] = vlib_get_buffer_index (vm, b2);
@@ -243,6 +280,18 @@ dpdk_crypto_dequeue (vlib_main_t * vm, vlib_node_runtime_t * node,
       /* XXX store bi0 and next0 in op0 private? */
       b0 = vlib_buffer_from_rte_mbuf (op0->sym[0].m_src);
       bi[0] = vlib_get_buffer_index (vm, b0);
+
+      /* Update vlib_buffer if protocol offload enabled */
+      if (dcm->lookaside_proto_offload) {
+	      word diff;
+	      u8 *new_data, *cur_data = vlib_buffer_get_current(b0);
+	      struct rte_mbuf *mbuf = op0->sym[0].m_src;
+
+	      new_data = rte_pktmbuf_mtod(mbuf, u8 *);
+	      diff = new_data - cur_data;
+	      b0->current_data += diff;
+	      b0->current_length = mbuf->data_len;
+      }
 
       op0->status = RTE_CRYPTO_OP_STATUS_NOT_PROCESSED;
 
