@@ -617,6 +617,8 @@ show_dpdk_crypto_pools_fn (vlib_main_t * vm,
       vlib_cli_output (vm, "%U\n", format_dpdk_mempool, data->crypto_op);
     if (data->session_h)
       vlib_cli_output (vm, "%U\n", format_dpdk_mempool, data->session_h);
+    if (data->session_priv)
+      vlib_cli_output (vm, "%U\n", format_dpdk_mempool, data->session_priv);
 
     struct rte_mempool **mp;
     vec_foreach (mp, data->session_drv)

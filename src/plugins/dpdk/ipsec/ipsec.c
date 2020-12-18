@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017 Intel and/or its affiliates.
+ * Copyright 2020-2021 NXP
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at:
@@ -23,6 +24,7 @@
 #include <dpdk/buffer.h>
 #include <dpdk/ipsec/ipsec.h>
 
+u32 session_drv_size;
 dpdk_crypto_main_t dpdk_crypto_main;
 
 #define EMPTY_STRUCT {0}
@@ -318,6 +320,83 @@ crypto_set_auth_xform (struct rte_crypto_sym_xform *xform,
     xform->auth.op = RTE_CRYPTO_AUTH_OP_VERIFY;
 }
 
+static clib_error_t *
+crypto_create_session_priv_pool (u8 numa)
+{
+  dpdk_crypto_main_t *dcm = &dpdk_crypto_main;
+  crypto_data_t *data;
+  u8 *pool_name;
+  struct rte_mempool *mp_priv;
+
+  data = vec_elt_at_index (dcm->data, numa);
+
+  if (data->session_priv)
+    return NULL;
+
+  pool_name = format (0, "session_priv_pool_numa%u%c", numa, 0);
+
+  mp_priv = rte_mempool_create ((char *) pool_name, DPDK_CRYPTO_NB_SESS_OBJS,
+			session_drv_size, 512, 0, NULL, NULL, NULL, NULL, numa, 0);
+  vec_free (pool_name);
+
+  if (!mp_priv)
+    return clib_error_return (0, "failed to create session priv mempool");
+
+  data->session_priv = mp_priv;
+
+  return NULL;
+}
+
+static inline struct rte_security_session *
+create_security_session (struct rte_crypto_sym_xform *xfs,
+                   ipsec_sa_t *sa,
+                   crypto_resource_t * res,
+                   u8 is_outbound)
+{
+#define IPDEFTTL 64
+  dpdk_crypto_main_t *dcm = &dpdk_crypto_main;
+  crypto_data_t *data;
+  struct rte_security_ctx *ctx;
+  struct rte_mempool **mp;
+  struct rte_security_ipsec_tunnel_param *tunnel;
+  struct rte_security_session_conf sess_conf = {
+                       .action_type = RTE_SECURITY_ACTION_TYPE_LOOKASIDE_PROTOCOL,
+                       .protocol = RTE_SECURITY_PROTOCOL_IPSEC,
+                       {.ipsec = {
+                               .options = { 0 },
+                               .proto = RTE_SECURITY_IPSEC_SA_PROTO_ESP,
+                               .mode = RTE_SECURITY_IPSEC_SA_MODE_TUNNEL,
+                       } },
+
+               };
+
+  data = vec_elt_at_index (dcm->data, res->numa);
+
+  /* Set remaining Security Fields */
+  sess_conf.ipsec.spi = sa->spi;
+  sess_conf.ipsec.salt = sa->salt;
+  sess_conf.ipsec.direction = is_outbound ? RTE_SECURITY_IPSEC_SA_DIR_EGRESS:
+                                       RTE_SECURITY_IPSEC_SA_DIR_INGRESS;
+  sess_conf.crypto_xform = xfs;
+
+  tunnel = &sess_conf.ipsec.tunnel;
+  tunnel->type = RTE_SECURITY_IPSEC_TUNNEL_IPV4;
+  tunnel->ipv4.ttl = IPDEFTTL;
+  memcpy((uint8_t *)&tunnel->ipv4.src_ip,
+                 (uint8_t *)&sa->tunnel_src_addr.ip4.as_u32, 4);
+  memcpy((uint8_t *)&tunnel->ipv4.dst_ip,
+                 (uint8_t *)&sa->tunnel_dst_addr.ip4.as_u32, 4);
+
+
+  ctx = (struct rte_security_ctx *) rte_cryptodev_get_sec_ctx(res->dev_id);
+  mp = vec_elt_at_index (data->session_drv, res->drv_id);
+  ASSERT (mp[0] != NULL);
+
+  crypto_create_session_priv_pool (res->numa);
+
+  return rte_security_session_create(ctx, &sess_conf, mp[0], data->session_priv);
+}
+
 clib_error_t *
 create_sym_session (struct rte_cryptodev_sym_session **session,
 		    u32 sa_idx,
@@ -333,7 +412,6 @@ create_sym_session (struct rte_cryptodev_sym_session **session,
   struct rte_crypto_sym_xform *xfs;
   struct rte_cryptodev_sym_session **s;
   clib_error_t *error = 0;
-
 
   sa = pool_elt_at_index (im->sad, sa_idx);
 
@@ -364,40 +442,48 @@ create_sym_session (struct rte_cryptodev_sym_session **session,
   data = vec_elt_at_index (dcm->data, res->numa);
   clib_spinlock_lock_if_init (&data->lockp);
 
-  /*
-   * DPDK_VER >= 1708:
-   *   Multiple worker/threads share the session for an SA
-   *   Single session per SA, initialized for each device driver
-   */
-  s = (void *) hash_get (data->session_by_sa_index, sa_idx);
+  if (dcm->lookaside_proto_offload) {
+    session[0] = (struct rte_cryptodev_sym_session *)
+         create_security_session (xfs, sa, res, is_outbound);
+    if (NULL == session[0])
+         return clib_error_return (0, "failed to create security session");
 
-  if (!s)
-    {
-      session[0] = rte_cryptodev_sym_session_create (data->session_h);
-      if (!session[0])
-	{
-	  data->session_h_failed += 1;
-	  error = clib_error_return (0, "failed to create session header");
-	  goto done;
-	}
-      hash_set (data->session_by_sa_index, sa_idx, session[0]);
-    }
-  else
-    session[0] = s[0];
+  } else {
+    /*
+     * DPDK_VER >= 1708:
+     *   Multiple worker/threads share the session for an SA
+     *   Single session per SA, initialized for each device driver
+     */
+    s = (void *) hash_get (data->session_by_sa_index, sa_idx);
 
-  struct rte_mempool **mp;
-  mp = vec_elt_at_index (data->session_drv, res->drv_id);
-  ASSERT (mp[0] != NULL);
+    if (!s)
+      {
+        session[0] = rte_cryptodev_sym_session_create (data->session_h);
+        if (!session[0])
+	  {
+	    data->session_h_failed += 1;
+	    error = clib_error_return (0, "failed to create session header");
+	    goto done;
+	  }
+        hash_set (data->session_by_sa_index, sa_idx, session[0]);
+      }
+    else
+      session[0] = s[0];
 
-  i32 ret =
-    rte_cryptodev_sym_session_init (res->dev_id, session[0], xfs, mp[0]);
-  if (ret)
-    {
-      data->session_drv_failed[res->drv_id] += 1;
-      error = clib_error_return (0, "failed to init session for drv %u",
-				 res->drv_id);
-      goto done;
-    }
+    struct rte_mempool **mp;
+    mp = vec_elt_at_index (data->session_drv, res->drv_id);
+    ASSERT (mp[0] != NULL);
+
+    i32 ret =
+      rte_cryptodev_sym_session_init (res->dev_id, session[0], xfs, mp[0]);
+    if (ret)
+      {
+        data->session_drv_failed[res->drv_id] += 1;
+        error = clib_error_return (0, "failed to init session for drv %u",
+			res->drv_id);
+        goto done;
+      }
+  }
 
   add_session_by_drv_and_sa_idx (session[0], data, res->drv_id, sa_idx);
 
@@ -661,6 +747,7 @@ crypto_dev_conf (u8 dev, u16 n_qp, u8 numa)
 static void
 crypto_scan_devs (u32 n_mains)
 {
+  dpdk_config_main_t *conf = &dpdk_config_main;
   dpdk_crypto_main_t *dcm = &dpdk_crypto_main;
   struct rte_cryptodev *cryptodev;
   struct rte_cryptodev_info info = { 0 };
@@ -696,6 +783,14 @@ crypto_scan_devs (u32 n_mains)
 
       if (!(info.feature_flags & RTE_CRYPTODEV_FF_SYM_OPERATION_CHAINING))
 	continue;
+
+      /* Enable Crypto Protocol Offload only if driver supports that */
+      if (conf->en_lookaside_proto_offload &&
+       (info.feature_flags & RTE_CRYPTODEV_FF_SECURITY))
+               dcm->lookaside_proto_offload = 1;
+
+      printf("IPSec Protocol offload %s for dev %s\n",
+                       dcm->lookaside_proto_offload ? "Enabled" : "Disabled", dev->name);
 
       if ((error = crypto_dev_conf (i, dev->max_qp, dev->numa)))
 	{
@@ -872,7 +967,6 @@ crypto_create_session_h_pool (vlib_main_t * vm, u8 numa)
 
   pool_name = format (0, "session_h_pool_numa%u%c", numa, 0);
 
-
   elt_size = rte_cryptodev_sym_get_header_session_size ();
 
 #if RTE_VERSION < RTE_VERSION_NUM(19, 2, 0, 0)
@@ -901,7 +995,6 @@ crypto_create_session_drv_pool (vlib_main_t * vm, crypto_dev_t * dev)
   crypto_data_t *data;
   u8 *pool_name;
   struct rte_mempool *mp;
-  u32 elt_size;
   u8 numa = dev->numa;
 
   data = vec_elt_at_index (dcm->data, numa);
@@ -916,10 +1009,11 @@ crypto_create_session_drv_pool (vlib_main_t * vm, crypto_dev_t * dev)
 
   pool_name = format (0, "session_drv%u_pool_numa%u%c", dev->drv_id, numa, 0);
 
-  elt_size = rte_cryptodev_sym_get_private_session_size (dev->id);
-  mp =
-    rte_mempool_create ((char *) pool_name, DPDK_CRYPTO_NB_SESS_OBJS,
-			elt_size, 512, 0, NULL, NULL, NULL, NULL, numa, 0);
+  session_drv_size = rte_cryptodev_sym_get_private_session_size (dev->id);
+
+    mp =
+      rte_mempool_create ((char *) pool_name, DPDK_CRYPTO_NB_SESS_OBJS,
+			session_drv_size, 512, 0, NULL, NULL, NULL, NULL, numa, 0);
 
   vec_free (pool_name);
 
@@ -975,6 +1069,7 @@ crypto_disable (void)
     {
       rte_mempool_free (data->crypto_op);
       rte_mempool_free (data->session_h);
+      rte_mempool_free (data->session_priv);
 
       vec_foreach_index (i, data->session_drv)
 	rte_mempool_free (data->session_drv[i]);
@@ -1019,6 +1114,7 @@ dpdk_ipsec_main_init (vlib_main_t * vm)
   crypto_worker_main_t *cwm;
   clib_error_t *error = NULL;
   u32 skip_master, n_mains;
+  u32 idx;
 
   n_mains = tm->n_vlib_mains;
   skip_master = vlib_num_workers () > 0;
@@ -1063,8 +1159,24 @@ dpdk_ipsec_main_init (vlib_main_t * vm)
       return 0;
     }
 
-
-  u32 idx = ipsec_register_esp_backend (vm, im, "dpdk backend",
+  if (dcm->lookaside_proto_offload) {
+	/* TODO support tun a7 IPv6 proto offload
+	 * Currently using non-proto offload nodes
+	 */
+	idx = ipsec_register_esp_backend (vm, im, "dpdk crypto lookaside",
+					"dpdk-esp-proto-encrypt",
+					"dpdk-esp4-encrypt-tun",
+					"dpdk-esp-proto-decrypt",
+					"dpdk-esp4-decrypt",
+					"dpdk-esp6-encrypt",
+					"dpdk-esp6-encrypt-tun",
+					"dpdk-esp6-decrypt",
+					"dpdk-esp6-decrypt",
+					dpdk_ipsec_check_support,
+					NULL,
+					dpdk_ipsec_enable_disable);
+  } else {
+	idx = ipsec_register_esp_backend (vm, im, "dpdk crypto",
 					"dpdk-esp4-encrypt",
 					"dpdk-esp4-encrypt-tun",
 					"dpdk-esp4-decrypt",
@@ -1076,6 +1188,8 @@ dpdk_ipsec_main_init (vlib_main_t * vm)
 					dpdk_ipsec_check_support,
 					add_del_sa_session,
 					dpdk_ipsec_enable_disable);
+  }
+
   int rv;
   if (im->esp_current_backend == ~0)
     {
