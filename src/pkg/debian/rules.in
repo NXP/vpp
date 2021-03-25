@@ -30,6 +30,13 @@ build3vers := $(shell py3versions -sv)
 override_dh_strip:
 	dh_strip --dbg-package=vpp-dbg
 
+override_dh_shlibdeps:
+	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info -l$(CROSS_SYSROOT)/lib/:$(OPENSSL_PATH)/lib/:/home/nxa19696/Work/fd.io/vpp_up/build-root/build-dpaa-aarch64/vpp/lib/
+#override_dh_shlibdeps:
+#	dh_shlibdeps 2>&1 \
+          | { grep -v -e "probably a plugin" -e "similar warnings have been skipped" || true; }
+
+
 DEB_HOST_MULTIARCH = $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
 override_dh_install:

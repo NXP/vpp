@@ -63,7 +63,7 @@ endif()
 ##############################################################################
 unset(DPDK_LINK_LIBRARIES)
 unset(DPDK_LINK_FLAGS)
-message(STATUS "Found DPDK ${DPDK_VERSION} in ${DPDK_INCLUDE_DIR}")
+message(STATUS "Found DPDK ${DPDK_VERSION} in ${DPDK_INCLUDE_DIR} CMAKE_PREFIX_PATH = ${CMAKE_PREFIX_PATH}")
 include_directories (${DPDK_INCLUDE_DIR})
 
 if(DPDK_IS_SHARED_LIB)
@@ -79,8 +79,8 @@ endif()
 ##############################################################################
 # libnuma
 ##############################################################################
-vpp_plugin_find_library(dpdk NUMA_LIB "numa")
-list(APPEND DPDK_LINK_LIBRARIES ${NUMA_LIB})
+#vpp_plugin_find_library(dpdk NUMA_LIB "numa")
+#list(APPEND DPDK_LINK_LIBRARIES ${NUMA_LIB})
 
 ##############################################################################
 # Mellanox libraries
