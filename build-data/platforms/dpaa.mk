@@ -97,3 +97,4 @@ vpp_cmake_args += -DCMAKE_TOOLCHAIN_FILE=$(PACKAGE_BUILD_DIR)/../../../toolchain
 dpaa_TAG_BUILD_TYPE = release
 dpaa_debug_TAG_BUILD_TYPE = debug
 
+vpp_configure_depend += prep-dpdk-lib
