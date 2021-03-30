@@ -11,10 +11,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if(CMAKE_CROSSCOMPILING)
-  return()
-endif()
-
 get_cmake_property(VPP_COMPONENTS COMPONENTS)
 string(REPLACE ";" " " VPP_COMPONENTS "${VPP_COMPONENTS}")
 
