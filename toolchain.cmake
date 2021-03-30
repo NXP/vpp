@@ -28,23 +28,16 @@ set(DPDK_INCLUDE_DIR $ENV{DPDK_PATH}/include)
 include_directories("$ENV{NUMA_PATH}/include")
 list(APPEND CMAKE_PREFIX_PATH $ENV{NUMA_PATH})
 
-#include_directories("/usr/include/python3.5")
-#set(Python_ADDITIONAL_VERSIONS 3.5)
-#set(PYTHON_LIBRARIES   /usr/lib/python3.5/config-3.5m-x86_64-linux-gnu/)
-#set(PYTHON_INCLUDE_DIRS  /usr/include/python3.5/)
-
 
 set(OPENSSL_ROOT_DIR $ENV{OPENSSL_PATH})
 set(OPENSSL_LIBRARIES $ENV{OPENSSL_PATH}/lib/lcrypto)
 set(OPENSSL_INCLUDE_DIR $ENV{OPENSSL_PATH}/include/)
 LINK_DIRECTORIES("$ENV{OPENSSL_PATH}/lib")
-#target_link_libraries(  $ENV{OPENSSL_PATH}/lib/lcrypto.a)
 # search for programs in the build host directories (not necessary)
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM BOTH)
 # for libraries and headers in the target directories
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)
-#set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE NEVER)
 
 
 set(THREADS_PTHREAD_ARG "2" CACHE STRING "Forcibly set by CMakeLists.txt." FORCE)
