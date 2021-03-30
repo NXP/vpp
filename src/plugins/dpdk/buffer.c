@@ -21,6 +21,7 @@
 #include <rte_ethdev.h>
 #include <rte_vfio.h>
 #include <rte_version.h>
+#include <rte_mbuf_pool_ops.h>
 
 #include <vlib/vlib.h>
 #include <dpdk/buffer.h>
@@ -34,15 +35,39 @@ struct rte_mempool **dpdk_mempool_by_buffer_pool_index = 0;
 struct rte_mempool **dpdk_no_cache_mempool_by_buffer_pool_index = 0;
 struct rte_mbuf *dpdk_mbuf_template_by_pool_index = 0;
 
+
+struct vlib_args {
+	vlib_main_t *vm;
+	vlib_buffer_pool_t *bp;
+};
+
+void
+rewrite_vlib_bufs(struct rte_mempool *mp,
+		 __attribute__((unused)) void *opaque_arg,
+		 void *_m,
+		 __attribute__((unused)) unsigned i) {
+	struct vlib_args *args = opaque_arg;
+	struct rte_mbuf *mb = (struct rte_mbuf *)_m;
+    void *b = (void *)vlib_buffer_from_rte_mbuf(mb);
+	u32 bi = vlib_get_buffer_index(args->vm, b);
+    struct rte_mempool_objhdr *hdr;
+
+    hdr = (struct rte_mempool_objhdr *) RTE_PTR_SUB (mb, sizeof (*hdr));
+	args->bp->buffers[i] = bi;
+}
+
 clib_error_t *
 dpdk_buffer_pool_init (vlib_main_t * vm, vlib_buffer_pool_t * bp)
 {
   uword buffer_mem_start = vm->buffer_main->buffer_mem_start;
-  struct rte_mempool *mp, *nmp;
+  struct rte_mempool *mp;
   struct rte_pktmbuf_pool_private priv;
   enum rte_iova_mode iova_mode;
   u32 i;
   u8 *name = 0;
+  const char *mp_ops_name = rte_mbuf_best_mempool_ops();
+  int ret;
+  struct vlib_args args;
 
   u32 elt_size =
     sizeof (struct rte_mbuf) + sizeof (vlib_buffer_t) + bp->data_size;
@@ -52,7 +77,6 @@ dpdk_buffer_pool_init (vlib_main_t * vm, vlib_buffer_pool_t * bp)
 			CLIB_CACHE_LINE_BYTES);
   vec_validate_aligned (dpdk_no_cache_mempool_by_buffer_pool_index, bp->index,
 			CLIB_CACHE_LINE_BYTES);
-
   /* normal mempool */
   name = format (name, "vpp pool %u%c", bp->index, 0);
   mp = rte_mempool_create_empty ((char *) name, bp->n_buffers,
@@ -66,29 +90,16 @@ dpdk_buffer_pool_init (vlib_main_t * vm, vlib_buffer_pool_t * bp)
 				bp->index);
     }
   vec_reset_length (name);
-
-  /* non-cached mempool */
-  name = format (name, "vpp pool %u (no cache)%c", bp->index, 0);
-  nmp = rte_mempool_create_empty ((char *) name, bp->n_buffers,
-				  elt_size, 0, sizeof (priv),
-				  bp->numa_node, 0);
-  if (!nmp)
-    {
-      rte_mempool_free (mp);
-      vec_free (name);
-      return clib_error_return (0,
-				"failed to create non-cache mempool for numa nude %u",
-				bp->index);
-    }
   vec_free (name);
 
   dpdk_mempool_by_buffer_pool_index[bp->index] = mp;
-  dpdk_no_cache_mempool_by_buffer_pool_index[bp->index] = nmp;
+  /* Not using no_cache_mempool for now */
+  dpdk_no_cache_mempool_by_buffer_pool_index[bp->index] = NULL;
 
-  mp->pool_id = nmp->pool_id = bp->index;
+  mp->pool_id = bp->index;
 
-  rte_mempool_set_ops_byname (mp, "vpp", NULL);
-  rte_mempool_set_ops_byname (nmp, "vpp-no-cache", NULL);
+  /* Use platform specific mempool ops */
+  rte_mempool_set_ops_byname (mp, mp_ops_name, NULL);
 
   /* Call the mempool priv initializer */
   memset (&priv, 0, sizeof (priv));
@@ -96,43 +107,8 @@ dpdk_buffer_pool_init (vlib_main_t * vm, vlib_buffer_pool_t * bp)
     vlib_buffer_get_default_data_size (vm);
   priv.mbuf_priv_size = VLIB_BUFFER_HDR_SIZE;
   rte_pktmbuf_pool_init (mp, &priv);
-  rte_pktmbuf_pool_init (nmp, &priv);
 
   iova_mode = rte_eal_iova_mode ();
-
-  /* populate mempool object buffer header */
-  for (i = 0; i < bp->n_buffers; i++)
-    {
-      struct rte_mempool_objhdr *hdr;
-      vlib_buffer_t *b = vlib_get_buffer (vm, bp->buffers[i]);
-      struct rte_mbuf *mb = rte_mbuf_from_vlib_buffer (b);
-      hdr = (struct rte_mempool_objhdr *) RTE_PTR_SUB (mb, sizeof (*hdr));
-      hdr->mp = mp;
-      hdr->iova = (iova_mode == RTE_IOVA_VA) ?
-	pointer_to_uword (mb) : vlib_physmem_get_pa (vm, mb);
-      STAILQ_INSERT_TAIL (&mp->elt_list, hdr, next);
-      STAILQ_INSERT_TAIL (&nmp->elt_list, hdr, next);
-      mp->populated_size++;
-      nmp->populated_size++;
-    }
-
-  /* call the object initializers */
-  rte_mempool_obj_iter (mp, rte_pktmbuf_init, 0);
-
-  /* create mbuf header tempate from the first buffer in the pool */
-  vec_validate_aligned (dpdk_mbuf_template_by_pool_index, bp->index,
-			CLIB_CACHE_LINE_BYTES);
-  clib_memcpy (vec_elt_at_index (dpdk_mbuf_template_by_pool_index, bp->index),
-	       rte_mbuf_from_vlib_buffer (vlib_buffer_ptr_from_index
-					  (buffer_mem_start, *bp->buffers,
-					   0)), sizeof (struct rte_mbuf));
-
-  for (i = 0; i < bp->n_buffers; i++)
-    {
-      vlib_buffer_t *b;
-      b = vlib_buffer_ptr_from_index (buffer_mem_start, bp->buffers[i], 0);
-      vlib_buffer_copy_template (b, &bp->buffer_template);
-    }
 
   /* map DMA pages if at least one physical device exists */
   if (rte_eth_dev_count_avail ())
@@ -146,12 +122,18 @@ dpdk_buffer_pool_init (vlib_main_t * vm, vlib_buffer_pool_t * bp)
       page_sz = 1ULL << pm->log2_page_size;
 
       for (i = 0; i < pm->n_pages; i++)
-	{
-	  char *va = ((char *) pm->base) + i * page_sz;
-	  uword pa = (iova_mode == RTE_IOVA_VA) ?
+	  {
+	    char *va = ((char *) pm->base) + i * page_sz;
+	    uword pa = (iova_mode == RTE_IOVA_VA) ?
 	    pointer_to_uword (va) : pm->page_table[i];
 
-	  if (do_vfio_map &&
+		ret = rte_mempool_populate_iova (mp, va, pa, page_sz, 0, 0);
+		if (ret < 0)
+		{
+			rte_mempool_free (mp);
+			return clib_error_return (0, "failed to populate %d", ret);
+		}
+	   if (do_vfio_map &&
 #if RTE_VERSION < RTE_VERSION_NUM(19, 11, 0, 0)
 	      rte_vfio_dma_map (pointer_to_uword (va), pa, page_sz))
 #else
@@ -159,19 +141,53 @@ dpdk_buffer_pool_init (vlib_main_t * vm, vlib_buffer_pool_t * bp)
 					  pointer_to_uword (va), pa, page_sz))
 #endif
 	    do_vfio_map = 0;
+	  }
+   }
 
-	  struct rte_mempool_memhdr *memhdr;
-	  memhdr = clib_mem_alloc (sizeof (*memhdr));
-	  memhdr->mp = mp;
-	  memhdr->addr = va;
-	  memhdr->iova = pa;
-	  memhdr->len = page_sz;
-	  memhdr->free_cb = 0;
-	  memhdr->opaque = 0;
+  /* Fix the mempool hdr mismatch between DPDK and vlib */
+  args.vm = vm;
+  args.bp = bp;
+  rte_mempool_obj_iter (mp, rewrite_vlib_bufs, &args);
 
-	  STAILQ_INSERT_TAIL (&mp->mem_list, memhdr, next);
-	  mp->nb_mem_chunks++;
-	}
+#if 0
+  for (i = 0; i < bp->n_buffers; i++)
+    {
+      struct rte_mempool_objhdr *hdr;
+      vlib_buffer_t *b = vlib_get_buffer (vm, bp->buffers[i]);
+      struct rte_mbuf *mb = rte_mbuf_from_vlib_buffer (b);
+
+      hdr = (struct rte_mempool_objhdr *) RTE_PTR_SUB (mb, sizeof (*hdr));
+      hdr->mp = mp;
+	  hdr->iova = (iova_mode == RTE_IOVA_VA) ?
+			pointer_to_uword (mb) : vlib_physmem_get_pa (vm, mb);
+      STAILQ_INSERT_TAIL (&mp->elt_list, hdr, next);
+      STAILQ_INSERT_TAIL (&nmp->elt_list, hdr, next);
+      mp->populated_size++;
+      nmp->populated_size++; /* TODO */
+
+      vlib_buffer_copy_template (b, &bp->buffer_template);
+	  printf("%s: mp[%s] hdr %p hdr->iova 0x%lX mb[%d] = %p buff_addr = %p\n",
+					  __func__,hdr->mp->name, hdr, hdr->iova, i , mb, mb->buf_addr);
+    }
+  printf("%s: mp[%s] Range:  mb[%d] = %p\n",__func__,mp->name, 0 ,
+				  rte_mbuf_from_vlib_buffer(vlib_get_buffer (vm, bp->buffers[0])));
+  printf("%s: mp[%s] Range:  mb[%d] = %p\n",__func__,mp->name, bp->n_buffers - 1,
+				  rte_mbuf_from_vlib_buffer(vlib_get_buffer (vm, bp->buffers[bp->n_buffers - 1])));
+#endif
+  /* call the object initializers */
+  rte_mempool_obj_iter (mp, rte_pktmbuf_init, 0);
+  /* create mbuf header tempate from the first buffer in the pool */
+  vec_validate_aligned (dpdk_mbuf_template_by_pool_index, bp->index,
+			CLIB_CACHE_LINE_BYTES);
+  clib_memcpy (vec_elt_at_index (dpdk_mbuf_template_by_pool_index, bp->index),
+	       rte_mbuf_from_vlib_buffer (vlib_buffer_ptr_from_index
+					  (buffer_mem_start, *bp->buffers,
+					   0)), sizeof (struct rte_mbuf));
+  for (i = 0; i < bp->n_buffers; i++)
+    {
+      vlib_buffer_t *b;
+      b = vlib_buffer_ptr_from_index (buffer_mem_start, bp->buffers[i], 0);
+      vlib_buffer_copy_template (b, &bp->buffer_template);
     }
 
   return 0;
