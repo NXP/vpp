@@ -501,8 +501,10 @@ dpdk_lib_init (dpdk_main_t * dm)
 	      xd->port_conf.rxmode.offloads &= ~DEV_RX_OFFLOAD_SCATTER;
 	      break;
 
+	      /* DPAAx */
+	    case VNET_DPDK_PMD_DPAA:
 	    case VNET_DPDK_PMD_DPAA2:
-	      xd->port_type = VNET_DPDK_PORT_TYPE_ETH_10G;
+	      xd->port_type = port_type_from_speed_capa (&dev_info);
 	      break;
 
 	      /* Cisco VIC */
