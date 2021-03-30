@@ -11,23 +11,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-add_vpp_plugin(avf
-  SOURCES
-  cli.c
-  device.c
-  format.c
-  input.c
-  output.c
-  plugin.c
-  avf_api.c
+#add_vpp_plugin(avf
+#  SOURCES
+#  cli.c
+#  device.c
+#  format.c
+#  input.c
+#  output.c
+#  plugin.c
+#  avf_api.c
 
-  MULTIARCH_SOURCES
-  input.c
-  output.c
+#  MULTIARCH_SOURCES
+#  input.c
+#  output.c
 
-  API_FILES
-  avf.api
+#  API_FILES
+#  avf.api
 
-  API_TEST_SOURCES
-  avf_test.c
-)
+#  API_TEST_SOURCES
+#  avf_test.c
+#)
