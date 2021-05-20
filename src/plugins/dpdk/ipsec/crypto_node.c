@@ -3,6 +3,7 @@
  * crypto_node.c - DPDK Cryptodev input node
  *
  * Copyright (c) 2017 Intel and/or its affiliates.
+ * Copyright 2019-2021 NXP
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a opy of the License at:
@@ -128,85 +129,125 @@ static_always_inline u32
 dpdk_crypto_dequeue (vlib_main_t * vm, crypto_worker_main_t * cwm,
 		     vlib_node_runtime_t * node, crypto_resource_t * res)
 {
-  u8 numa = rte_socket_id ();
-  u32 n_ops, total_n_deq, n_deq[2];
-  u32 bis[VLIB_FRAME_SIZE], *bi;
-  u16 nexts[VLIB_FRAME_SIZE], *next;
-  struct rte_crypto_op **ops;
+	dpdk_crypto_main_t *dcm = &dpdk_crypto_main;
+	u8 numa = rte_socket_id ();
+	u32 n_ops, total_n_deq, n_deq[2];
+	u32 bis[VLIB_FRAME_SIZE], *bi;
+	u16 nexts[VLIB_FRAME_SIZE], *next;
+	struct rte_crypto_op **ops;
 
-  n_deq[0] = 0;
-  n_deq[1] = 0;
-  bi = bis;
-  next = nexts;
-  ops = cwm->ops;
+	n_deq[0] = 0;
+	n_deq[1] = 0;
+	bi = bis;
+	next = nexts;
+	ops = cwm->ops;
 
-  n_ops = total_n_deq = rte_cryptodev_dequeue_burst (res->dev_id,
+	n_ops = total_n_deq = rte_cryptodev_dequeue_burst (res->dev_id,
 						     res->qp_id,
 						     ops, VLIB_FRAME_SIZE);
-  /* no op dequeued, do not proceed */
-  if (n_ops == 0)
-    return 0;
+	/* no op dequeued, do not proceed */
+	if (n_ops == 0)
+		return 0;
 
-  while (n_ops >= 4)
-    {
-      struct rte_crypto_op *op0, *op1, *op2, *op3;
+	while (n_ops >= 4) {
+		struct rte_crypto_op *op0, *op1, *op2, *op3;
 
-      /* Prefetch next iteration. */
-      if (n_ops >= 8)
-	{
-	  CLIB_PREFETCH (ops[4], CLIB_CACHE_LINE_BYTES, LOAD);
-	  CLIB_PREFETCH (ops[5], CLIB_CACHE_LINE_BYTES, LOAD);
-	  CLIB_PREFETCH (ops[6], CLIB_CACHE_LINE_BYTES, LOAD);
-	  CLIB_PREFETCH (ops[7], CLIB_CACHE_LINE_BYTES, LOAD);
+		/* Prefetch next iteration. */
+		if (n_ops >= 8) {
 
-	  CLIB_PREFETCH (crypto_op_get_priv (ops[4]),
+		CLIB_PREFETCH (ops[4], CLIB_CACHE_LINE_BYTES, LOAD);
+		CLIB_PREFETCH (ops[5], CLIB_CACHE_LINE_BYTES, LOAD);
+		CLIB_PREFETCH (ops[6], CLIB_CACHE_LINE_BYTES, LOAD);
+		CLIB_PREFETCH (ops[7], CLIB_CACHE_LINE_BYTES, LOAD);
+
+		CLIB_PREFETCH (crypto_op_get_priv (ops[4]),
 			 CLIB_CACHE_LINE_BYTES, LOAD);
-	  CLIB_PREFETCH (crypto_op_get_priv (ops[5]),
+		CLIB_PREFETCH (crypto_op_get_priv (ops[5]),
 			 CLIB_CACHE_LINE_BYTES, LOAD);
-	  CLIB_PREFETCH (crypto_op_get_priv (ops[6]),
+		CLIB_PREFETCH (crypto_op_get_priv (ops[6]),
 			 CLIB_CACHE_LINE_BYTES, LOAD);
-	  CLIB_PREFETCH (crypto_op_get_priv (ops[7]),
+		CLIB_PREFETCH (crypto_op_get_priv (ops[7]),
 			 CLIB_CACHE_LINE_BYTES, LOAD);
-	}
+		}
 
-      op0 = ops[0];
-      op1 = ops[1];
-      op2 = ops[2];
-      op3 = ops[3];
+		op0 = ops[0];
+		op1 = ops[1];
+		op2 = ops[2];
+		op3 = ops[3];
 
-      next[0] = crypto_op_get_priv (op0)->next;
-      next[1] = crypto_op_get_priv (op1)->next;
-      next[2] = crypto_op_get_priv (op2)->next;
-      next[3] = crypto_op_get_priv (op3)->next;
+		next[0] = crypto_op_get_priv (op0)->next;
+	    next[1] = crypto_op_get_priv (op1)->next;
+		next[2] = crypto_op_get_priv (op2)->next;
+	    next[3] = crypto_op_get_priv (op3)->next;
 
-      bi[0] = crypto_op_get_priv (op0)->bi;
-      bi[1] = crypto_op_get_priv (op1)->bi;
-      bi[2] = crypto_op_get_priv (op2)->bi;
-      bi[3] = crypto_op_get_priv (op3)->bi;
+		bi[0] = crypto_op_get_priv (op0)->bi;
+		bi[1] = crypto_op_get_priv (op1)->bi;
+		bi[2] = crypto_op_get_priv (op2)->bi;
+	    bi[3] = crypto_op_get_priv (op3)->bi;
 
-      n_deq[crypto_op_get_priv (op0)->encrypt] += 1;
-      n_deq[crypto_op_get_priv (op1)->encrypt] += 1;
-      n_deq[crypto_op_get_priv (op2)->encrypt] += 1;
-      n_deq[crypto_op_get_priv (op3)->encrypt] += 1;
+		n_deq[crypto_op_get_priv (op0)->encrypt] += 1;
+	    n_deq[crypto_op_get_priv (op1)->encrypt] += 1;
+		n_deq[crypto_op_get_priv (op2)->encrypt] += 1;
+	    n_deq[crypto_op_get_priv (op3)->encrypt] += 1;
 
-      dpdk_crypto_input_check_op (vm, node, op0, next + 0);
-      dpdk_crypto_input_check_op (vm, node, op1, next + 1);
-      dpdk_crypto_input_check_op (vm, node, op2, next + 2);
-      dpdk_crypto_input_check_op (vm, node, op3, next + 3);
+		dpdk_crypto_input_check_op (vm, node, op0, next + 0);
+	    dpdk_crypto_input_check_op (vm, node, op1, next + 1);
+		dpdk_crypto_input_check_op (vm, node, op2, next + 2);
+	    dpdk_crypto_input_check_op (vm, node, op3, next + 3);
 
-      op0->status = RTE_CRYPTO_OP_STATUS_NOT_PROCESSED;
-      op1->status = RTE_CRYPTO_OP_STATUS_NOT_PROCESSED;
-      op2->status = RTE_CRYPTO_OP_STATUS_NOT_PROCESSED;
-      op3->status = RTE_CRYPTO_OP_STATUS_NOT_PROCESSED;
+		op0->status = RTE_CRYPTO_OP_STATUS_NOT_PROCESSED;
+		op1->status = RTE_CRYPTO_OP_STATUS_NOT_PROCESSED;
+		op2->status = RTE_CRYPTO_OP_STATUS_NOT_PROCESSED;
+		op3->status = RTE_CRYPTO_OP_STATUS_NOT_PROCESSED;
 
-      /* next */
-      next += 4;
-      n_ops -= 4;
-      ops += 4;
-      bi += 4;
+		/* Update vlib_buffer if protocol offload enabled */
+		if (dcm->lookaside_proto_offload) {
+			word diff;
+			u8 *new_data, *cur_data;
+			struct rte_mbuf *mbuf;
+			vlib_buffer_t *b0, *b1, *b2, *b3;
+
+			b0 = vlib_get_buffer(vm, bi[0]);
+			cur_data = vlib_buffer_get_current(b0);
+			mbuf = rte_mbuf_from_vlib_buffer(b0);
+			new_data = rte_pktmbuf_mtod(mbuf, u8 *);
+			diff = new_data - cur_data;
+			b0->current_data += diff;
+			b0->current_length = mbuf->data_len;
+
+			b1 = vlib_get_buffer(vm, bi[1]);
+			cur_data = vlib_buffer_get_current(b1);
+			mbuf = rte_mbuf_from_vlib_buffer(b1);
+			new_data = rte_pktmbuf_mtod(mbuf, u8 *);
+			diff = new_data - cur_data;
+			b1->current_data += diff;
+			b1->current_length = mbuf->data_len;
+
+			b2 = vlib_get_buffer(vm, bi[2]);
+			cur_data = vlib_buffer_get_current(b2);
+			mbuf = rte_mbuf_from_vlib_buffer(b2);
+			new_data = rte_pktmbuf_mtod(mbuf, u8 *);
+			diff = new_data - cur_data;
+			b2->current_data += diff;
+			b2->current_length = mbuf->data_len;
+
+			b3 = vlib_get_buffer(vm, bi[3]);
+			cur_data = vlib_buffer_get_current(b3);
+			mbuf = rte_mbuf_from_vlib_buffer(b3);
+			new_data = rte_pktmbuf_mtod(mbuf, u8 *);
+			diff = new_data - cur_data;
+			b3->current_data += diff;
+			b3->current_length = mbuf->data_len;
+
+		}
+
+		/* next */
+		next += 4;
+		n_ops -= 4;
+		ops += 4;
+		bi += 4;
     }
-  while (n_ops > 0)
-    {
+	while (n_ops > 0) {
       struct rte_crypto_op *op0;
 
       op0 = ops[0];
@@ -215,31 +256,45 @@ dpdk_crypto_dequeue (vlib_main_t * vm, crypto_worker_main_t * cwm,
       bi[0] = crypto_op_get_priv (op0)->bi;
 
       n_deq[crypto_op_get_priv (op0)->encrypt] += 1;
-
-      dpdk_crypto_input_check_op (vm, node, op0, next + 0);
-
+	  dpdk_crypto_input_check_op (vm, node, op0, next + 0);
       op0->status = RTE_CRYPTO_OP_STATUS_NOT_PROCESSED;
+
+      /* Update vlib_buffer if protocol offload enabled */
+      if (dcm->lookaside_proto_offload) {
+		  vlib_buffer_t *b0;
+	      struct rte_mbuf *mbuf;
+	      u8 *new_data, *cur_data;
+	      word diff;
+
+		  b0 = vlib_get_buffer(vm, bi[0]);
+		  cur_data = vlib_buffer_get_current(b0);
+		  mbuf = rte_mbuf_from_vlib_buffer(b0);
+	      new_data = rte_pktmbuf_mtod(mbuf, u8 *);
+	      diff = new_data - cur_data;
+	      b0->current_data += diff;
+	      b0->current_length = mbuf->data_len;
+      }
 
       /* next */
       next += 1;
       n_ops -= 1;
       ops += 1;
       bi += 1;
-    }
+	}
 
-  vlib_node_increment_counter (vm, node->node_index,
+	vlib_node_increment_counter (vm, node->node_index,
 			       DPDK_CRYPTO_INPUT_ERROR_DQ_COPS, total_n_deq);
 
-  res->inflights[0] -= n_deq[0];
-  res->inflights[1] -= n_deq[1];
+	res->inflights[0] -= n_deq[0];
+	res->inflights[1] -= n_deq[1];
 
-  vlib_buffer_enqueue_to_next (vm, node, bis, nexts, total_n_deq);
+	vlib_buffer_enqueue_to_next (vm, node, bis, nexts, total_n_deq);
 
-  dpdk_crypto_input_trace (vm, node, res->dev_id, bis, nexts, total_n_deq);
+	dpdk_crypto_input_trace (vm, node, res->dev_id, bis, nexts, total_n_deq);
 
-  crypto_free_ops (numa, cwm->ops, total_n_deq);
+	crypto_free_ops (numa, cwm->ops, total_n_deq);
 
-  return total_n_deq;
+	return total_n_deq;
 }
 
 static_always_inline uword
