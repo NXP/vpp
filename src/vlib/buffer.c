@@ -552,8 +552,11 @@ vlib_buffer_pool_create (vlib_main_t * vm, char *name, u32 data_size,
   alloc_size = vlib_buffer_alloc_size (bm->ext_hdr_size, data_size);
   n_alloc_per_page = (1ULL << m->log2_page_size) / alloc_size;
 
-  /* preallocate buffer indices memory */
-  bp->n_buffers = m->n_pages * n_alloc_per_page;
+  /* preallocate buffer indices memory. Number of buffers should be
+   * controllerd by startup.config file by 'buffers_per_numa' as
+   * didn't want to use all hugepage memory size.
+   */
+  bp->n_buffers = bm->buffers_per_numa;
   bp->buffers = clib_mem_alloc_aligned (bp->n_buffers * sizeof (u32),
 					CLIB_CACHE_LINE_BYTES);
 
@@ -581,7 +584,8 @@ vlib_buffer_pool_create (vlib_main_t * vm, char *name, u32 data_size,
 	bi = vlib_get_buffer_index (vm, (vlib_buffer_t *) p);
 
 	bp->buffers[bp->n_avail++] = bi;
-
+	if (bp->n_buffers  == bp->n_avail)
+	  break;
 	vlib_get_buffer (vm, bi);
       }
 
