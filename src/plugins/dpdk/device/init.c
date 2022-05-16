@@ -1488,6 +1488,7 @@ dpdk_init (vlib_main_t * vm)
   dm->conf = &dpdk_config_main;
 
   vec_add1 (dm->conf->eal_init_args, (u8 *) "vnet");
+  vec_add1 (dm->conf->eal_init_args, (u8 *) "--huge-unlink");
 
   dm->stat_poll_interval = DPDK_STATS_POLL_INTERVAL;
   dm->link_state_poll_interval = DPDK_LINK_POLL_INTERVAL;
