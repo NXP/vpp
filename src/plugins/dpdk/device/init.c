@@ -1257,7 +1257,7 @@ dpdk_config (vlib_main_t * vm, unformat_input_t * input)
       if (fcntl (log_fds[1], F_SETFL, O_NONBLOCK) == 0)
 	{
 	  FILE *f = fdopen (log_fds[1], "a");
-	  if (f && rte_openlog_stream (f) == 0)
+	  if (f && rte_openlog_stream (stdout) == 0)
 	    {
 	      clib_file_t t = { 0 };
 	      t.read_function = dpdk_log_read_ready;
