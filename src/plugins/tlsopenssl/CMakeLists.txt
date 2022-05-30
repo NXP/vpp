@@ -11,35 +11,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-include (CheckFunctionExists)
-if(OPENSSL_FOUND AND OPENSSL_VERSION VERSION_GREATER_EQUAL "1.1.0")
-  include_directories(${OPENSSL_INCLUDE_DIR})
-  add_vpp_plugin(tlsopenssl
-    SOURCES
-    tls_bio.c
-    tls_openssl.c
-    tls_openssl_api.c
-    tls_async.c
-    dtls_bio.c
+#include (CheckFunctionExists)
+#if(OPENSSL_FOUND AND OPENSSL_VERSION VERSION_GREATER_EQUAL "1.1.0")
+#  include_directories(${OPENSSL_INCLUDE_DIR})
+  #  add_vpp_plugin(tlsopenssl
+  #  SOURCES
+  #  tls_bio.c
+  # tls_openssl.c
+  # tls_openssl_api.c
+  # tls_async.c
+  # dtls_bio.c
 
-    API_FILES
-    tls_openssl.api
+  #  API_FILES
+  # tls_openssl.api
 
-    API_TEST_SOURCES
-    tls_openssl_test.c
+  # API_TEST_SOURCES
+  # tls_openssl_test.c
 
-    LINK_LIBRARIES
-    ${OPENSSL_LIBRARIES}
-  )
+  # LINK_LIBRARIES
+  # ${OPENSSL_LIBRARIES}
+  #  )
 
-  set(CMAKE_REQUIRED_INCLUDES "${OPENSSL_INCLUDE_DIR}")
-  set(CMAKE_REQUIRED_LIBRARIES "${OPENSSL_LIBRARIES}")
-  check_function_exists(SSL_set_async_callback HAVE_OPENSSL_ASYNC)
+ # set(CMAKE_REQUIRED_INCLUDES "${OPENSSL_INCLUDE_DIR}")
+ # set(CMAKE_REQUIRED_LIBRARIES "${OPENSSL_LIBRARIES}")
+ # check_function_exists(SSL_set_async_callback HAVE_OPENSSL_ASYNC)
 
-  if (HAVE_OPENSSL_ASYNC)
-    add_definitions(-DHAVE_OPENSSL_ASYNC)
-  endif()
+ #if (HAVE_OPENSSL_ASYNC)
+ #  add_definitions(-DHAVE_OPENSSL_ASYNC)
+ #endif()
 
 
-endif()
-
+ # endif()
