@@ -74,7 +74,7 @@ else()
     ##############################################################################
     unset(DPDK_LINK_LIBRARIES)
     unset(DPDK_LINK_FLAGS)
-    message(STATUS "Found DPDK ${DPDK_VERSION} in ${DPDK_INCLUDE_DIR}")
+    message(STATUS "Found DPDK ${DPDK_VERSION} in ${DPDK_INCLUDE_DIR} CMAKE_PREFIX_PATH = ${CMAKE_PREFIX_PATH}")
     include_directories (${DPDK_INCLUDE_DIR})
 
     if(DPDK_IS_SHARED_LIB)
@@ -90,8 +90,8 @@ else()
     ##############################################################################
     # libnuma
     ##############################################################################
-    vpp_plugin_find_library(dpdk NUMA_LIB "numa")
-    list(APPEND DPDK_LINK_LIBRARIES ${NUMA_LIB})
+    #    vpp_plugin_find_library(dpdk NUMA_LIB "numa")
+    #    list(APPEND DPDK_LINK_LIBRARIES ${NUMA_LIB})
 
     ##############################################################################
     # Mellanox libraries
@@ -120,11 +120,11 @@ endif()
 if(OPENSSL_FOUND)
   include_directories(${OPENSSL_INCLUDE_DIR})
 
-  set(DPDK_CRYPTODEV_OP_SOURCE cryptodev/cryptodev_op_data_path.c)
-  set(DPDK_CRYPTODEV_SOURCE cryptodev/cryptodev.c)
-  if (${DPDK_VERSION} VERSION_GREATER_EQUAL "20.8.0")
-    set(DPDK_CRYPTODEV_RAW_SOURCE cryptodev/cryptodev_raw_data_path.c)
-  endif()
+  #  set(DPDK_CRYPTODEV_OP_SOURCE cryptodev/cryptodev_op_data_path.c)
+  #set(DPDK_CRYPTODEV_SOURCE cryptodev/cryptodev.c)
+  #if (${DPDK_VERSION} VERSION_GREATER_EQUAL "20.8.0")
+  #  set(DPDK_CRYPTODEV_RAW_SOURCE cryptodev/cryptodev_raw_data_path.c)
+  #endif()
 endif()
 
 add_vpp_plugin(dpdk
@@ -139,9 +139,9 @@ add_vpp_plugin(dpdk
   device/format.c
   device/init.c
   device/node.c
-  ${DPDK_CRYPTODEV_OP_SOURCE}
-  ${DPDK_CRYPTODEV_SOURCE}
-  ${DPDK_CRYPTODEV_RAW_SOURCE}
+  #  ${DPDK_CRYPTODEV_OP_SOURCE}
+  #${DPDK_CRYPTODEV_SOURCE}
+  #${DPDK_CRYPTODEV_RAW_SOURCE}
 
   MULTIARCH_SOURCES
   buffer.c

@@ -5,12 +5,12 @@
 #include <vlib/vlib.h>
 
 #include <dpdk/device/dpdk.h>
-
+#if 0
 static const u32 supported_flow_actions_intel =
   (VNET_FLOW_ACTION_MARK | VNET_FLOW_ACTION_REDIRECT_TO_NODE |
    VNET_FLOW_ACTION_REDIRECT_TO_QUEUE | VNET_FLOW_ACTION_BUFFER_ADVANCE |
    VNET_FLOW_ACTION_COUNT | VNET_FLOW_ACTION_DROP | VNET_FLOW_ACTION_RSS);
-
+#endif
 #define DPDK_DRIVERS(...)                                                     \
   (dpdk_driver_name_t[])                                                      \
   {                                                                           \
@@ -18,6 +18,7 @@ static const u32 supported_flow_actions_intel =
   }
 
 static dpdk_driver_t dpdk_drivers[] = {
+#if 0
   {
     .drivers = DPDK_DRIVERS ({ "net_ice", "Intel E810 Family" },
 			     { "net_igc", "Intel I225 2.5G Family" },
@@ -41,11 +42,13 @@ static dpdk_driver_t dpdk_drivers[] = {
     .use_intel_phdr_cksum = 1,
     .int_unmaskable = 1,
   },
+#endif
   {
     .drivers = DPDK_DRIVERS ({ "net_liovf", "Cavium Lio VF" },
 			     { "net_thunderx", "Cavium ThunderX" }),
     .interface_name_prefix = "VirtualFunctionEthernet",
   },
+#if 0
   {
     .drivers = DPDK_DRIVERS ({ "net_iavf", "Intel iAVF" },
 			     { "net_i40e_vf", "Intel X710/XL710 Family VF" }),
@@ -54,6 +57,7 @@ static dpdk_driver_t dpdk_drivers[] = {
     .use_intel_phdr_cksum = 1,
     .int_unmaskable = 1,
   },
+#endif
   {
     .drivers = DPDK_DRIVERS ({ "net_e1000_igb_vf", "Intel e1000 VF" },
 			     { "net_ixgbe_vf", "Intel 82599 VF" }),
@@ -63,6 +67,10 @@ static dpdk_driver_t dpdk_drivers[] = {
   {
     .drivers = DPDK_DRIVERS ({ "net_dpaa2", "NXP DPAA2 Mac" }),
     .interface_name_prefix = "TenGigabitEthernet",
+  },
+  {
+    .drivers = DPDK_DRIVERS ({ "net_dpaa", "NXP DPAA Mac" }),
+    .interface_name_prefix = "GigabitEthernet",
   },
   {
     .drivers =

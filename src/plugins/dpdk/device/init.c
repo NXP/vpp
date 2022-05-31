@@ -26,7 +26,7 @@
 #include <vnet/interface/rx_queue_funcs.h>
 #include <dpdk/buffer.h>
 #include <dpdk/device/dpdk.h>
-#include <dpdk/cryptodev/cryptodev.h>
+//#include <dpdk/cryptodev/cryptodev.h>
 #include <vlib/pci/pci.h>
 #include <vlib/vmbus/vmbus.h>
 
@@ -1257,7 +1257,7 @@ dpdk_config (vlib_main_t * vm, unformat_input_t * input)
       if (fcntl (log_fds[1], F_SETFL, O_NONBLOCK) == 0)
 	{
 	  FILE *f = fdopen (log_fds[1], "a");
-	  if (f && rte_openlog_stream (f) == 0)
+	  if (f && rte_openlog_stream (stdout) == 0)
 	    {
 	      clib_file_t t = { 0 };
 	      t.read_function = dpdk_log_read_ready;
@@ -1411,7 +1411,7 @@ dpdk_process (vlib_main_t * vm, vlib_node_runtime_t * rt, vlib_frame_t * f)
 
   if (error)
     clib_error_report (error);
-
+#if 0
   if (dpdk_cryptodev_init)
     {
       error = dpdk_cryptodev_init (vm);
@@ -1422,7 +1422,7 @@ dpdk_process (vlib_main_t * vm, vlib_node_runtime_t * rt, vlib_frame_t * f)
 	  clib_error_free (error);
 	}
     }
-
+#endif
   tm->worker_thread_release = 1;
 
   f64 now = vlib_time_now (vm);
@@ -1488,6 +1488,7 @@ dpdk_init (vlib_main_t * vm)
   dm->conf = &dpdk_config_main;
 
   vec_add1 (dm->conf->eal_init_args, (u8 *) "vnet");
+  vec_add1 (dm->conf->eal_init_args, (u8 *) "--huge-unlink");
 
   dm->stat_poll_interval = DPDK_STATS_POLL_INTERVAL;
   dm->link_state_poll_interval = DPDK_LINK_POLL_INTERVAL;

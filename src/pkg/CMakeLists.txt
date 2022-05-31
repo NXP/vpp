@@ -11,9 +11,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if(CMAKE_CROSSCOMPILING)
-  return()
-endif()
+#if(CMAKE_CROSSCOMPILING)
+#  return()
+#endif()
 
 get_cmake_property(VPP_COMPONENTS COMPONENTS)
 string(REPLACE ";" " " VPP_COMPONENTS "${VPP_COMPONENTS}")
@@ -56,6 +56,7 @@ endforeach()
 add_custom_target(pkg-deb
   COMMENT "Building .deb packages..."
   WORKING_DIRECTORY ${VPP_BINARY_DIR}
-  COMMAND "dpkg-buildpackage" "-us" "-uc" "-b"
+  echo ${VPP_BINARY_DIR}
+  COMMAND "dpkg-buildpackage" "-us" "-uc" "-b" "-aarm64" "-d"
   USES_TERMINAL
 )

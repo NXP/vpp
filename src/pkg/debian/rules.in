@@ -23,6 +23,9 @@ build3vers := $(shell py3versions -sv)
 override_dh_strip:
 	dh_strip --dbg-package=vpp-dbg
 
+override_dh_shlibdeps:
+	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info -l$(CROSS_SYSROOT)/lib/:$(OPENSSL_PATH)/lib/:$(PWD)/lib/
+
 override_dh_install:
 	@for c in @VPP_COMPONENTS@; do \
 	  @CMAKE_COMMAND@ \
