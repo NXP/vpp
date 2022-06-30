@@ -158,3 +158,8 @@ if(NOT EXISTS ${CMAKE_BINARY_DIR}/startup.conf)
     ${CMAKE_BINARY_DIR}/startup.conf
   )
 endif()
+
+##############################################################################
+# NXP README
+##############################################################################
+install(FILES ${CMAKE_SOURCE_DIR}/../README_nxp.txt DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/vpp COMPONENT vpp-plugin-dpdk)
