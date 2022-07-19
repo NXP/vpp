@@ -438,7 +438,7 @@ vlib_buffer_pull (vlib_buffer_t * b, u8 size)
 /* Forward declaration. */
 struct vlib_main_t;
 
-#define VLIB_BUFFER_POOL_PER_THREAD_CACHE_SZ 512
+#define VLIB_BUFFER_POOL_PER_THREAD_CACHE_SZ 256
 
 typedef struct
 {
