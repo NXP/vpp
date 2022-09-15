@@ -945,6 +945,33 @@ dpdk_log_read_ready (clib_file_t * uf)
   return 0;
 }
 
+static void
+ dpdk_unregister_callbacks (vlib_main_t * vm)
+ {
+   vlib_buffer_set_alloc_free_callback (vm, 0, 0);
+ }
+
+ static clib_error_t *
+ dpdk_register_callbacks (vlib_main_t * vm)
+ {
+   if (vlib_buffer_set_alloc_free_callback (vm, dpdk_alloc_callback,
+					    dpdk_free_callback))
+     goto err0;
+   return 0;
+
+ err0:
+   vlib_buffer_set_alloc_free_callback (vm, 0, 0);
+   return clib_error_return (0, "failed to register callback");
+ }
+
+ static clib_error_t *
+ dpdk_termination_case_enable (vlib_main_t * vm)
+ {
+   dpdk_unregister_callbacks (vm);
+   dpdk_register_callbacks (vm);
+   return 0;
+ }
+
 static clib_error_t *
 dpdk_config (vlib_main_t * vm, unformat_input_t * input)
 {
@@ -1308,6 +1335,9 @@ dpdk_config (vlib_main_t * vm, unformat_input_t * input)
   /* main thread 1st */
   if ((error = dpdk_buffer_pools_create (vm)))
     return error;
+
+  /* to enable termination cases */
+  dpdk_termination_case_enable(vm);
 
 done:
   return error;

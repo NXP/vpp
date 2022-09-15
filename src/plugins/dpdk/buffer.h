@@ -22,6 +22,14 @@
 extern struct rte_mempool **dpdk_mempool_by_buffer_pool_index;
 extern struct rte_mempool **dpdk_no_cache_mempool_by_buffer_pool_index;
 
+u32
+dpdk_alloc_callback (vlib_main_t *vm, u8 buffer_pool_index, u32 *buffers,
+		     u32 n_buffers);
+
+u32
+dpdk_free_callback (vlib_main_t *vm, u8 buffer_pool_index, u32 *buffers,
+		    u32 n_buffers);
+
 clib_error_t *dpdk_buffer_pools_create (vlib_main_t * vm);
 
 #endif /* include_dpdk_buffer_h */

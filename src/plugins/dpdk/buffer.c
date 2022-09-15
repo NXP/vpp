@@ -42,6 +42,58 @@ struct vlib_args {
 	vlib_buffer_pool_t *bp;
 };
 
+u32
+dpdk_alloc_callback (vlib_main_t *vm, u8 buffer_pool_index, u32 *buffers,
+		     u32 n_buffers)
+{
+	struct rte_mempool *mp;
+	struct rte_mbuf *mb;
+	vlib_buffer_t *b;
+	u32 i, mbuf_count;
+
+	vlib_buffer_pool_t *bp = vlib_get_buffer_pool (vm, buffer_pool_index);
+	mp = dpdk_mempool_by_buffer_pool_index[bp->index];
+
+	mbuf_count = rte_mempool_avail_count (mp);
+	if (n_buffers <= mbuf_count)
+	{
+		for (i = 0; i < n_buffers; i++)
+		{
+			mb = rte_pktmbuf_alloc(mp);
+			if (!mb) {
+				clib_error ("mbuf failed");
+				return 0;
+			}
+		b = vlib_buffer_from_rte_mbuf (mb);
+		u32 bi = vlib_get_buffer_index(vm, b);
+		buffers[i] = bi;
+		}
+		return n_buffers;
+	}
+	else
+		return 0;
+}
+
+u32
+dpdk_free_callback (vlib_main_t *vm, u8 buffer_pool_index, u32 *buffers,
+                    u32 n_buffers)
+{
+	struct rte_mbuf *mb;
+	int i;
+
+	for (i = 0; i < n_buffers; i++)
+	{
+		vlib_buffer_t *b = vlib_get_buffer (vm, buffers[i]);
+		mb = rte_mbuf_from_vlib_buffer (b);
+		if (mb == NULL) {
+			clib_warning ("No buffer to free\n");
+			continue;
+		}
+		rte_pktmbuf_free(mb);
+	}
+	return 0;
+}
+
 void
 rewrite_vlib_bufs(struct rte_mempool *mp,
 		__attribute__((unused)) void *opaque_arg,
