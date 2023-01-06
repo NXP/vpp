@@ -18,7 +18,7 @@
 /* $$$$ We should rename always_inline -> clib_always_inline */
 #undef always_inline
 
-#define ALLOW_EXPERIMENTAL_API
+//#define ALLOW_EXPERIMENTAL_API
 
 #include <rte_config.h>
 
