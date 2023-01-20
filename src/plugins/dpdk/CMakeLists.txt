@@ -1,5 +1,5 @@
 # Copyright (c) 2016 Cisco and/or its affiliates.
-# Copyright 2019-2022 NXP
+# Copyright 2019-2023 NXP
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at:
@@ -140,6 +140,11 @@ add_vpp_plugin(dpdk
   device/format.c
   device/init.c
   device/node.c
+  ipsec/cli.c
+  ipsec/crypto_node.c
+  ipsec/esp_decrypt.c
+  ipsec/esp_encrypt.c
+  ipsec/ipsec.c
   ${DPDK_CRYPTODEV_OP_SOURCE}
   ${DPDK_CRYPTODEV_SOURCE}
   ${DPDK_CRYPTODEV_RAW_SOURCE}
@@ -148,6 +153,9 @@ add_vpp_plugin(dpdk
   buffer.c
   device/device.c
   device/node.c
+  ipsec/crypto_node.c
+  ipsec/esp_decrypt.c
+  ipsec/esp_encrypt.c
 
   INSTALL_HEADERS
   device/dpdk.h

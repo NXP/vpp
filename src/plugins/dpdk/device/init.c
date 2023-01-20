@@ -1442,7 +1442,7 @@ dpdk_process (vlib_main_t * vm, vlib_node_runtime_t * rt, vlib_frame_t * f)
 
   if (error)
     clib_error_report (error);
-
+#if 0
   if (dpdk_cryptodev_init)
     {
       error = dpdk_cryptodev_init (vm);
@@ -1453,7 +1453,7 @@ dpdk_process (vlib_main_t * vm, vlib_node_runtime_t * rt, vlib_frame_t * f)
 	  clib_error_free (error);
 	}
     }
-
+#endif
   tm->worker_thread_release = 1;
 
   f64 now = vlib_time_now (vm);
