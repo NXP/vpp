@@ -863,10 +863,10 @@ VLIB_NODE_FN (dpdk_esp_proto_decrypt_node) (vlib_main_t * vm,
 										sa_index0, 1, b0->current_length);
 
          res->ops[res->n_ops] = op;
-         //res->bi[res->n_ops] = bi0;
+         res->bi[res->n_ops] = bi0;
          res->n_ops += 1;
          priv->bi = bi0;
-	 priv->encrypt = 0;
+		 priv->encrypt = 0;
 
          /*rte_pktmbuf_dump(stdout, mb0, 200);*/
 
