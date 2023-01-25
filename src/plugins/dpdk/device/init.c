@@ -27,7 +27,7 @@
 #include <vnet/interface/rx_queue_funcs.h>
 #include <dpdk/buffer.h>
 #include <dpdk/device/dpdk.h>
-//#include <dpdk/cryptodev/cryptodev.h>
+#include <dpdk/cryptodev/cryptodev.h>
 #include <vlib/pci/pci.h>
 #include <vlib/vmbus/vmbus.h>
 

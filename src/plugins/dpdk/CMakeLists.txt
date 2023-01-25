@@ -1,5 +1,5 @@
 # Copyright (c) 2016 Cisco and/or its affiliates.
-# Copyright 2019-2022 NXP
+# Copyright 2019-2023 NXP
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at:
@@ -121,11 +121,11 @@ endif()
 if(OPENSSL_FOUND)
   include_directories(${OPENSSL_INCLUDE_DIR})
 
-  #  set(DPDK_CRYPTODEV_OP_SOURCE cryptodev/cryptodev_op_data_path.c)
-  #set(DPDK_CRYPTODEV_SOURCE cryptodev/cryptodev.c)
-  #if (${DPDK_VERSION} VERSION_GREATER_EQUAL "20.8.0")
-  #  set(DPDK_CRYPTODEV_RAW_SOURCE cryptodev/cryptodev_raw_data_path.c)
-  #endif()
+  set(DPDK_CRYPTODEV_OP_SOURCE cryptodev/cryptodev_op_data_path.c)
+  set(DPDK_CRYPTODEV_SOURCE cryptodev/cryptodev.c)
+  if (${DPDK_VERSION} VERSION_GREATER_EQUAL "20.8.0")
+    set(DPDK_CRYPTODEV_RAW_SOURCE cryptodev/cryptodev_raw_data_path.c)
+  endif()
 endif()
 
 add_vpp_plugin(dpdk
@@ -140,14 +140,22 @@ add_vpp_plugin(dpdk
   device/format.c
   device/init.c
   device/node.c
-  #  ${DPDK_CRYPTODEV_OP_SOURCE}
-  #${DPDK_CRYPTODEV_SOURCE}
-  #${DPDK_CRYPTODEV_RAW_SOURCE}
+  ipsec/cli.c
+  ipsec/crypto_node.c
+  ipsec/esp_decrypt.c
+  ipsec/esp_encrypt.c
+  ipsec/ipsec.c
+  ${DPDK_CRYPTODEV_OP_SOURCE}
+  ${DPDK_CRYPTODEV_SOURCE}
+  ${DPDK_CRYPTODEV_RAW_SOURCE}
 
   MULTIARCH_SOURCES
   buffer.c
   device/device.c
   device/node.c
+  ipsec/crypto_node.c
+  ipsec/esp_decrypt.c
+  ipsec/esp_encrypt.c
 
   INSTALL_HEADERS
   device/dpdk.h
